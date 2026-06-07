@@ -51,6 +51,11 @@ function sanitizeLoadedState(loaded: any): SimulationState {
       genetics_program: false,
       feed_silo_expansion: false,
     };
+  } else {
+    if (loaded.nlec.upgrades.automated_feeding === undefined) loaded.nlec.upgrades.automated_feeding = false;
+    if (loaded.nlec.upgrades.veterinary_care === undefined) loaded.nlec.upgrades.veterinary_care = false;
+    if (loaded.nlec.upgrades.genetics_program === undefined) loaded.nlec.upgrades.genetics_program = false;
+    if (loaded.nlec.upgrades.feed_silo_expansion === undefined) loaded.nlec.upgrades.feed_silo_expansion = false;
   }
   if (!loaded.nlec.logs) {
     loaded.nlec.logs = ['NLEC Livestock Management System initialized.'];
@@ -132,8 +137,11 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         const newState = simulateMonth(prev);
         const record = createHistoricalRecord(newState);
 
-        setHistory((h) => [...h, record].slice(-500)); // Keep last 500 months
-        localStorage.setItem(HISTORY_KEY, JSON.stringify([...history, record]));
+        setHistory((h) => {
+          const nextHistory = [...h, record].slice(-500);
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
+          return nextHistory;
+        });
 
         return newState;
       });
@@ -152,8 +160,11 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       const newState = simulateMonth(prev);
       const record = createHistoricalRecord(newState);
 
-      setHistory((h) => [...h, record].slice(-500));
-      localStorage.setItem(HISTORY_KEY, JSON.stringify([...history, record]));
+      setHistory((h) => {
+        const nextHistory = [...h, record].slice(-500);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(nextHistory));
+        return nextHistory;
+      });
 
       return newState;
     });
