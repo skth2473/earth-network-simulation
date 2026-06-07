@@ -569,7 +569,7 @@ export default function NLECDashboard() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name} ${percent !== undefined ? (percent * 100).toFixed(0) : 0}%`}
                 >
                   {livestock_data.map((entry, index) => {
                     const meta = speciesMeta[entry.name] || { color: '#7c3aed' };

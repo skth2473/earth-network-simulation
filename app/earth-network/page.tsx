@@ -36,7 +36,7 @@ export default function EarthNetworkDashboard() {
     { name: 'Thriving', value: status_counts.thriving, fill: '#8b5cf6' },
   ];
 
-  const tech_tiers = {};
+  const tech_tiers: Record<number, number> = {};
   state.earth_network.earths.forEach((e) => {
     tech_tiers[e.technology_tier] = (tech_tiers[e.technology_tier] || 0) + 1;
   });
