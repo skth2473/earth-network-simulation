@@ -52,16 +52,24 @@ export function initializeSimulation(): SimulationState {
       year: 2050,
     },
     nlec: {
-      total_livestock: 6100,
+      total_livestock: 6500,
       feed_storage: 5000,
       feed_production: 500,
       food_output: 10370,
       profit: 150000,
+      budget: 100000,
       livestock: [
-        { species: 'Cattle', count_male: 400, count_female: 600, count: 1000, feed_required: 500, reproduction_rate: 0.08, health: 0.85, productivity: 0.8, coverage_percentage: 100 },
-        { species: 'Goats', count_male: 225, count_female: 275, count: 500, feed_required: 150, reproduction_rate: 0.15, health: 0.9, productivity: 0.75, coverage_percentage: 100 },
-        { species: 'Poultry', count_male: 2500, count_female: 2500, count: 5000, feed_required: 250, reproduction_rate: 0.25, health: 0.8, productivity: 0.85, coverage_percentage: 100 },
+        { species: 'Cattle', count_male: 400, count_female: 600, count: 1000, feed_required: 500, reproduction_rate: 0.08, health: 0.85, productivity: 0.8, coverage_percentage: 100, feeding_quality: 'standard', breeding_mode: 'balanced' },
+        { species: 'Goats', count_male: 225, count_female: 275, count: 500, feed_required: 150, reproduction_rate: 0.15, health: 0.9, productivity: 0.75, coverage_percentage: 100, feeding_quality: 'standard', breeding_mode: 'balanced' },
+        { species: 'Poultry', count_male: 2500, count_female: 2500, count: 5000, feed_required: 250, reproduction_rate: 0.25, health: 0.8, productivity: 0.85, coverage_percentage: 100, feeding_quality: 'standard', breeding_mode: 'balanced' },
       ],
+      upgrades: {
+        automated_feeding: false,
+        veterinary_care: false,
+        genetics_program: false,
+        feed_silo_expansion: false,
+      },
+      logs: ['NLEC Livestock Management System initialized.'],
     },
     earth_network: {
       total_civilizations: 5,
@@ -166,26 +174,125 @@ export function simulateMonth(state: SimulationState): SimulationState {
   });
 
   // NLEC simulation
-  const feed_used = newState.nlec.livestock.reduce((sum, l) => sum + l.feed_required, 0);
-  newState.nlec.feed_storage -= feed_used;
-  newState.nlec.feed_storage += newState.nlec.feed_production;
+  const has_auto_feeding = newState.nlec.upgrades?.automated_feeding;
+  const feed_used = newState.nlec.livestock.reduce((sum, l) => {
+    let feed = l.feed_required;
+    if (has_auto_feeding) feed *= 0.85; // 15% reduction
+    if (l.breeding_mode === 'intensive') feed *= 1.25; // 25% increase
+    return sum + feed;
+  }, 0);
+
+  // Apply feed silo expansion upgrade (+100M kg/month feed production)
+  let feed_produced = newState.nlec.feed_production;
+  if (newState.nlec.upgrades?.feed_silo_expansion) {
+    feed_produced += 100;
+  }
+
+  // Update feed storage (ensure it doesn't drop below 0)
+  newState.nlec.feed_storage = Math.max(0, newState.nlec.feed_storage - feed_used + feed_produced);
+
+  const is_starving = newState.nlec.feed_storage <= 0;
+  const has_vet_care = newState.nlec.upgrades?.veterinary_care;
+  const has_genetics = newState.nlec.upgrades?.genetics_program;
+
+  const initial_species_counts: Record<string, number> = {
+    Cattle: 1000,
+    Goats: 500,
+    Poultry: 5000,
+  };
+
+  const species_health_warnings: string[] = [];
 
   newState.nlec.livestock = newState.nlec.livestock.map(l => {
-    const health_change = (newState.nlec.feed_storage > 500 ? 0.01 : -0.02) + (Math.random() - 0.5) * 0.02;
-    const new_count = l.count * (1 + l.reproduction_rate * (l.health - 0.5) * 0.2);
-    const productivity_change = l.health * 0.02 - 0.01;
+    // Health change calculation
+    let health_change = 0;
+    if (is_starving) {
+      health_change = -0.08; // severe health drop if starving
+    } else {
+      health_change = newState.nlec.feed_storage > 500 ? 0.01 : -0.01;
+    }
+
+    // Policy and upgrade modifiers to health
+    if (l.feeding_quality === 'premium') health_change += 0.01;
+    if (l.feeding_quality === 'organic') health_change += 0.02;
+    if (l.breeding_mode === 'controlled') health_change += 0.01;
+    if (l.breeding_mode === 'intensive') health_change += -0.02;
+    if (has_vet_care) health_change += 0.01;
+
+    // Random fluctuation
+    health_change += (Math.random() - 0.5) * 0.02;
+
+    const new_health = Math.max(0.2, Math.min(has_vet_care ? 0.98 : 0.95, l.health + health_change));
+
+    if (new_health < 0.6) {
+      species_health_warnings.push(`${l.species} health is low (${(new_health * 100).toFixed(0)}%)`);
+    }
+
+    // Reproduction rate calculation
+    let rep_multiplier = 1.0;
+    if (l.breeding_mode === 'controlled') rep_multiplier = 0.1;
+    if (l.breeding_mode === 'intensive') rep_multiplier = 1.5;
+    if (has_genetics) rep_multiplier *= 1.2;
+
+    const effective_rep_rate = l.reproduction_rate * rep_multiplier;
+    const new_count = l.count * (1 + effective_rep_rate * (new_health - 0.5) * 0.2);
+
+    // Productivity calculation
+    let prod_multiplier = 1.0;
+    if (l.feeding_quality === 'premium') prod_multiplier *= 1.1;
+    if (l.feeding_quality === 'organic') prod_multiplier *= 1.25;
+    if (has_genetics) prod_multiplier *= 1.15;
+
+    const productivity_change = new_health * 0.02 - 0.01;
+    const new_productivity = Math.max(0.3, Math.min(has_genetics ? 0.98 : 0.95, l.productivity * prod_multiplier + productivity_change));
+
+    // Coverage percentage relative to initial baseline
+    const initial_count = initial_species_counts[l.species] || 1000;
+    const coverage = Math.min(100, (new_count / initial_count) * 100);
 
     return {
       ...l,
       count: Math.max(10, new_count),
-      health: Math.max(0.4, Math.min(0.95, l.health + health_change)),
-      productivity: Math.max(0.3, Math.min(0.95, l.productivity + productivity_change)),
+      health: new_health,
+      productivity: new_productivity,
+      coverage_percentage: coverage,
     };
+  });
+
+  // Calculate profit and budget
+  let total_feed_cost = 0;
+  newState.nlec.livestock.forEach(l => {
+    let feed_needed = l.feed_required;
+    if (has_auto_feeding) feed_needed *= 0.85;
+    if (l.breeding_mode === 'intensive') feed_needed *= 1.25;
+
+    let feed_price = 10; // base ₹10M per Million kg
+    if (l.feeding_quality === 'premium') feed_price = 15;
+    if (l.feeding_quality === 'organic') feed_price = 20;
+
+    total_feed_cost += feed_needed * feed_price;
   });
 
   newState.nlec.total_livestock = newState.nlec.livestock.reduce((sum, l) => sum + l.count, 0);
   newState.nlec.food_output = newState.nlec.total_livestock * 1.7 * newState.nlec.livestock.reduce((avg, l) => avg + l.productivity, 0) / newState.nlec.livestock.length;
-  newState.nlec.profit = (newState.nlec.food_output * 29.41 - feed_used * 10);
+  
+  newState.nlec.profit = (newState.nlec.food_output * 29.41 - total_feed_cost);
+  newState.nlec.budget += newState.nlec.profit;
+
+  // Add system logs
+  const new_logs: string[] = [];
+  if (is_starving) {
+    new_logs.push("CRITICAL: Feed storage depleted! Animals are starving!");
+  }
+  species_health_warnings.forEach(w => new_logs.push(`Warning: ${w}`));
+  if (newState.nlec.profit < 0) {
+    new_logs.push(`Deficit: Operations ran a budget loss of ₹${Math.abs(newState.nlec.profit).toFixed(0)}M.`);
+  }
+
+  if (new_logs.length > 0) {
+    const prev_logs = newState.nlec.logs || [];
+    newState.nlec.logs = [...new_logs, ...prev_logs].slice(0, 5);
+  }
 
   // Earth Network simulation
   const conflict_change = (Math.random() - 0.5) * 0.05;
@@ -271,5 +378,9 @@ export function createHistoricalRecord(state: SimulationState): HistoricalRecord
     energy_surplus: state.energy.surplus,
     swf_balance: state.swf.balance,
     space_planets: state.space.colonized_planets,
+    nlec_food_output: state.nlec.food_output,
+    nlec_profit: state.nlec.profit,
+    nlec_total_livestock: state.nlec.total_livestock,
+    nlec_feed_storage: state.nlec.feed_storage,
   };
 }

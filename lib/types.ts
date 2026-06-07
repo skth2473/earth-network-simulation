@@ -50,6 +50,15 @@ export interface LivestockData {
   health: number;
   productivity: number;
   coverage_percentage: number; // 0-100%, when reaches 60% unlock energy
+  feeding_quality: 'standard' | 'premium' | 'organic';
+  breeding_mode: 'controlled' | 'balanced' | 'intensive';
+}
+
+export interface NLECUpgrades {
+  automated_feeding: boolean; // 15% feed reduction
+  veterinary_care: boolean; // +10% base health & faster recovery
+  genetics_program: boolean; // +20% reproduction, +15% productivity
+  feed_silo_expansion: boolean; // +100M kg/month production
 }
 
 export interface NLECSystem {
@@ -58,7 +67,10 @@ export interface NLECSystem {
   feed_production: number;
   food_output: number;
   profit: number;
+  budget: number; // Accumulated budget for NLEC operations
   livestock: LivestockData[];
+  upgrades: NLECUpgrades;
+  logs: string[]; // Recent system events
 }
 
 export interface CivilizationEarth {
@@ -150,4 +162,8 @@ export interface HistoricalRecord {
   energy_surplus: number;
   swf_balance: number;
   space_planets: number;
+  nlec_food_output: number;
+  nlec_profit: number;
+  nlec_total_livestock: number;
+  nlec_feed_storage: number;
 }

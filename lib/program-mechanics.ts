@@ -116,7 +116,7 @@ export function calculateLivestockCoverage(state: SimulationState): number {
 
   // Simple approach: coverage is based on total livestock relative to initial target
   const total_livestock = state.nlec.livestock.reduce((sum, l) => sum + l.count, 0);
-  const initial_target = 600 + 500 + 5000; // Cattle + Goats + Poultry initial
+  const initial_target = 1000 + 500 + 5000; // Cattle + Goats + Poultry initial (including male & female)
   return Math.min(100, (total_livestock / initial_target) * 100);
 }
 

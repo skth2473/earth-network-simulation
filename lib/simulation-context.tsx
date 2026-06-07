@@ -21,6 +21,74 @@ const SimulationContext = createContext<SimulationContextType | undefined>(undef
 const STORAGE_KEY = 'earth-network-simulation';
 const HISTORY_KEY = 'earth-network-history';
 
+function sanitizeLoadedState(loaded: any): SimulationState {
+  if (!loaded) return loaded;
+  
+  if (!loaded.nlec) {
+    loaded.nlec = {
+      total_livestock: 6500,
+      feed_storage: 5000,
+      feed_production: 500,
+      food_output: 10370,
+      profit: 150000,
+      budget: 100000,
+      livestock: [],
+      upgrades: {
+        automated_feeding: false,
+        veterinary_care: false,
+        genetics_program: false,
+        feed_silo_expansion: false,
+      },
+      logs: ['NLEC Livestock Management System initialized.'],
+    };
+  }
+
+  if (loaded.nlec.budget === undefined) loaded.nlec.budget = 100000;
+  if (!loaded.nlec.upgrades) {
+    loaded.nlec.upgrades = {
+      automated_feeding: false,
+      veterinary_care: false,
+      genetics_program: false,
+      feed_silo_expansion: false,
+    };
+  }
+  if (!loaded.nlec.logs) {
+    loaded.nlec.logs = ['NLEC Livestock Management System initialized.'];
+  }
+
+  const defaultLivestockData = {
+    Cattle: { feeding_quality: 'standard', breeding_mode: 'balanced' },
+    Goats: { feeding_quality: 'standard', breeding_mode: 'balanced' },
+    Poultry: { feeding_quality: 'standard', breeding_mode: 'balanced' },
+  };
+
+  if (Array.isArray(loaded.nlec.livestock)) {
+    loaded.nlec.livestock = loaded.nlec.livestock.map((l: any) => {
+      const defaults = (defaultLivestockData as any)[l.species] || { feeding_quality: 'standard', breeding_mode: 'balanced' };
+      return {
+        ...l,
+        feeding_quality: l.feeding_quality || defaults.feeding_quality,
+        breeding_mode: l.breeding_mode || defaults.breeding_mode,
+      };
+    });
+  }
+
+  return loaded as SimulationState;
+}
+
+function sanitizeLoadedHistory(loadedHistory: any[]): HistoricalRecord[] {
+  if (!Array.isArray(loadedHistory)) return [];
+  return loadedHistory.map((h: any) => {
+    return {
+      ...h,
+      nlec_food_output: h.nlec_food_output !== undefined ? h.nlec_food_output : (h.india_gdp ? h.india_gdp * 10 : 10370),
+      nlec_profit: h.nlec_profit !== undefined ? h.nlec_profit : (h.india_gdp ? h.india_gdp * 300 : 150000),
+      nlec_total_livestock: h.nlec_total_livestock !== undefined ? h.nlec_total_livestock : 6500,
+      nlec_feed_storage: h.nlec_feed_storage !== undefined ? h.nlec_feed_storage : 5000,
+    };
+  });
+}
+
 export function SimulationProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SimulationState | null>(null);
   const [history, setHistory] = useState<HistoricalRecord[]>([]);
@@ -32,8 +100,12 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
 
     if (saved) {
       try {
-        setState(JSON.parse(saved));
-        if (savedHistory) setHistory(JSON.parse(savedHistory));
+        const parsed = JSON.parse(saved);
+        setState(sanitizeLoadedState(parsed));
+        if (savedHistory) {
+          const parsedHistory = JSON.parse(savedHistory);
+          setHistory(sanitizeLoadedHistory(parsedHistory));
+        }
       } catch {
         setState(initializeSimulation());
       }
@@ -118,9 +190,13 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        setState(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setState(sanitizeLoadedState(parsed));
         const savedHistory = localStorage.getItem(HISTORY_KEY);
-        if (savedHistory) setHistory(JSON.parse(savedHistory));
+        if (savedHistory) {
+          const parsedHistory = JSON.parse(savedHistory);
+          setHistory(sanitizeLoadedHistory(parsedHistory));
+        }
         alert('Game loaded successfully');
       } catch {
         alert('Failed to load game');
