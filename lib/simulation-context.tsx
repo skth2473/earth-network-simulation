@@ -24,6 +24,11 @@ const HISTORY_KEY = 'earth-network-history';
 function sanitizeLoadedState(loaded: any): SimulationState {
   if (!loaded) return loaded;
   
+  // Migration: force legacy 2050 saves to reinitialize to 1947
+  if (loaded.india && (loaded.india.year === 2050 || loaded.india.year > 2000)) {
+    return initializeSimulation();
+  }
+  
   if (!loaded.nlec) {
     loaded.nlec = {
       total_livestock: 6500,
