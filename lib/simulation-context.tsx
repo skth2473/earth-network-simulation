@@ -29,9 +29,9 @@ function sanitizeLoadedState(loaded: any): SimulationState {
       total_livestock: 6500,
       feed_storage: 5000,
       feed_production: 500,
-      food_output: 10370,
-      profit: 150000,
-      budget: 100000,
+      food_output: 8840,
+      profit: 13100,
+      budget: 30000,
       livestock: [],
       upgrades: {
         automated_feeding: false,
@@ -43,7 +43,7 @@ function sanitizeLoadedState(loaded: any): SimulationState {
     };
   }
 
-  if (loaded.nlec.budget === undefined) loaded.nlec.budget = 100000;
+  if (loaded.nlec.budget === undefined) loaded.nlec.budget = 30000;
   if (!loaded.nlec.upgrades) {
     loaded.nlec.upgrades = {
       automated_feeding: false,
