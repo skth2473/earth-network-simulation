@@ -55,9 +55,9 @@ export function initializeSimulation(): SimulationState {
       total_livestock: 6500,
       feed_storage: 5000,
       feed_production: 500,
-      food_output: 10370,
-      profit: 150000,
-      budget: 100000,
+      food_output: 8840,
+      profit: 13100,
+      budget: 30000,
       livestock: [
         { species: 'Cattle', count_male: 400, count_female: 600, count: 1000, feed_required: 500, reproduction_rate: 0.08, health: 0.85, productivity: 0.8, coverage_percentage: 100, feeding_quality: 'standard', breeding_mode: 'balanced' },
         { species: 'Goats', count_male: 225, count_female: 275, count: 500, feed_required: 150, reproduction_rate: 0.15, health: 0.9, productivity: 0.75, coverage_percentage: 100, feeding_quality: 'standard', breeding_mode: 'balanced' },
@@ -188,8 +188,9 @@ export function simulateMonth(state: SimulationState): SimulationState {
     feed_produced += 100;
   }
 
-  // Update feed storage (ensure it doesn't drop below 0)
-  newState.nlec.feed_storage = Math.max(0, newState.nlec.feed_storage - feed_used + feed_produced);
+  // Update feed storage (ensure it doesn't drop below 0 or exceed the storage cap)
+  const max_storage = newState.nlec.upgrades?.feed_silo_expansion ? 25000 : 10000;
+  newState.nlec.feed_storage = Math.min(max_storage, Math.max(0, newState.nlec.feed_storage - feed_used + feed_produced));
 
   const is_starving = newState.nlec.feed_storage <= 0;
   const has_vet_care = newState.nlec.upgrades?.veterinary_care;
@@ -237,6 +238,23 @@ export function simulateMonth(state: SimulationState): SimulationState {
     const effective_rep_rate = l.reproduction_rate * rep_multiplier;
     const new_count = l.count * (1 + effective_rep_rate * (new_health - 0.5) * 0.2);
 
+    const final_count = Math.max(10, new_count);
+    const delta = final_count - l.count;
+    let count_male = l.count_male;
+    let count_female = l.count_female;
+    if (delta > 0) {
+      // births: distribute 40% male, 60% female (matching original species ratio)
+      count_male += delta * 0.4;
+      count_female += delta * 0.6;
+    } else if (delta < 0) {
+      // deaths/culls: distribute proportionally based on current gender ratio
+      const total_current = Math.max(1, l.count);
+      const male_ratio = l.count_male / total_current;
+      const female_ratio = l.count_female / total_current;
+      count_male = Math.max(5, l.count_male + delta * male_ratio);
+      count_female = Math.max(5, l.count_female + delta * female_ratio);
+    }
+
     // Productivity calculation
     let prod_multiplier = 1.0;
     if (l.feeding_quality === 'premium') prod_multiplier *= 1.1;
@@ -248,11 +266,13 @@ export function simulateMonth(state: SimulationState): SimulationState {
 
     // Coverage percentage relative to initial baseline
     const initial_count = initial_species_counts[l.species] || 1000;
-    const coverage = Math.min(100, (new_count / initial_count) * 100);
+    const coverage = Math.min(100, (final_count / initial_count) * 100);
 
     return {
       ...l,
-      count: Math.max(10, new_count),
+      count: final_count,
+      count_male,
+      count_female,
       health: new_health,
       productivity: new_productivity,
       coverage_percentage: coverage,
@@ -276,7 +296,7 @@ export function simulateMonth(state: SimulationState): SimulationState {
   newState.nlec.total_livestock = newState.nlec.livestock.reduce((sum, l) => sum + l.count, 0);
   newState.nlec.food_output = newState.nlec.total_livestock * 1.7 * newState.nlec.livestock.reduce((avg, l) => avg + l.productivity, 0) / newState.nlec.livestock.length;
   
-  newState.nlec.profit = (newState.nlec.food_output * 29.41 - total_feed_cost);
+  newState.nlec.profit = (newState.nlec.food_output * 2.5 - total_feed_cost);
   newState.nlec.budget += newState.nlec.profit;
 
   // Add system logs
