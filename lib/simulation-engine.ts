@@ -50,6 +50,10 @@ export function initializeSimulation(): SimulationState {
       ministries: initialMinistries,
       month: 1,
       year: 1947,
+      vip_level: 1,
+      vip_points: 0,
+      speedups_available: 5,
+      last_chest_claim: 0,
     },
     nlec: {
       total_livestock: 6500,
