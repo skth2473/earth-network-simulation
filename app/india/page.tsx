@@ -26,11 +26,14 @@ export default function IndiaDashboard() {
   const handleExecuteProgram = (ministryId: string, programId: string) => {
     setExecuting(`${ministryId}-${programId}`);
     const result = executeProgram(state, ministryId, programId);
-    if (result.success) {
-      updateState(result.state);
-      console.log(result.message);
-    }
-    setTimeout(() => setExecuting(null), 1000);
+    
+    // Always update state to save budget/morale/efficiency updates
+    updateState(result.state);
+    
+    // Alert the result message (success or failure detail)
+    alert(result.message);
+    
+    setExecuting(null);
   };
 
   return (
