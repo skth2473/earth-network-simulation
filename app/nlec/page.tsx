@@ -1,22 +1,41 @@
 'use client';
 
+import { useState } from 'react';
 import { useSimulation } from '@/lib/simulation-context';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { KPICard } from '@/components/kpi-card';
 import { TrendChart } from '@/components/trend-chart';
-import { LockedTier } from '@/components/locked-tier';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { NLECUpgrades } from '@/lib/types';
 
 export default function NLECDashboard() {
   const { state, history, updateState } = useSimulation();
   const isLocked = !state.unlock_system.livestock;
+  const [tradeAmount, setTradeAmount] = useState<10 | 100 | 500>(100);
 
-  // Species details map for icons
-  const speciesMeta: Record<string, { icon: string; color: string }> = {
-    Cattle: { icon: '🐄', color: '#7c3aed' },
-    Goats: { icon: '🐐', color: '#3b82f6' },
-    Poultry: { icon: '🐓', color: '#10b981' },
+  // Species details map for icons and styling
+  const speciesMeta: Record<string, { icon: string; color: string; gradient: string; glow: string; text: string }> = {
+    Cattle: {
+      icon: '🐄',
+      color: '#7c3aed',
+      gradient: 'from-purple-950/30 to-violet-950/10 border-purple-500/30',
+      glow: 'shadow-purple-500/5',
+      text: 'text-purple-400',
+    },
+    Goats: {
+      icon: '🐐',
+      color: '#3b82f6',
+      gradient: 'from-blue-950/30 to-sky-950/10 border-blue-500/30',
+      glow: 'shadow-blue-500/5',
+      text: 'text-blue-400',
+    },
+    Poultry: {
+      icon: '🐓',
+      color: '#10b981',
+      gradient: 'from-emerald-950/30 to-teal-950/10 border-emerald-500/30',
+      glow: 'shadow-emerald-500/5',
+      text: 'text-emerald-400',
+    },
   };
 
   const livestock_data = state.nlec.livestock.map((l) => ({
@@ -38,7 +57,11 @@ export default function NLECDashboard() {
 
   const feedProductionRate = state.nlec.feed_production + (state.nlec.upgrades?.feed_silo_expansion ? 100 : 0);
   const netFeedChange = feedProductionRate - feedConsumptionRate;
-  const feedStoragePct = Math.min(100, (state.nlec.feed_storage / 10000) * 100);
+  const maxStorage = state.nlec.upgrades?.feed_silo_expansion ? 25000 : 10000;
+  const feedStoragePct = Math.min(100, (state.nlec.feed_storage / maxStorage) * 100);
+
+  // Safety buffer months
+  const monthsLeft = netFeedChange < 0 ? state.nlec.feed_storage / Math.abs(netFeedChange) : Infinity;
 
   // Policy toggles
   const setFeedingQuality = (speciesName: string, quality: 'standard' | 'premium' | 'organic') => {
@@ -62,33 +85,33 @@ export default function NLECDashboard() {
   };
 
   // Buying/selling livestock
-  const buyLivestock = (speciesName: string) => {
-    const cost = 1500; // Million ₹
+  const buyLivestock = (speciesName: string, amount: number) => {
+    const cost = amount * 15; // Million ₹
     if (state.nlec.budget < cost) return;
     const newState = JSON.parse(JSON.stringify(state));
     const species = newState.nlec.livestock.find((l: any) => l.species === speciesName);
     if (species) {
-      species.count += 100;
-      species.count_male += 40;
-      species.count_female += 60;
+      species.count += amount;
+      species.count_male += amount * 0.4;
+      species.count_female += amount * 0.6;
       newState.nlec.budget -= cost;
       newState.nlec.total_livestock = newState.nlec.livestock.reduce((sum: number, l: any) => sum + l.count, 0);
-      newState.nlec.logs = [`Purchased 100 ${speciesName} (cost ₹${cost}M).`, ...(newState.nlec.logs || [])].slice(0, 5);
+      newState.nlec.logs = [`Purchased ${amount} ${speciesName} (cost ₹${cost}M).`, ...(newState.nlec.logs || [])].slice(0, 5);
       updateState(newState);
     }
   };
 
-  const sellLivestock = (speciesName: string) => {
-    const yieldAmt = 1000; // Million ₹
+  const sellLivestock = (speciesName: string, amount: number) => {
+    const yieldAmt = amount * 10; // Million ₹
     const newState = JSON.parse(JSON.stringify(state));
     const species = newState.nlec.livestock.find((l: any) => l.species === speciesName);
-    if (species && species.count >= 110) {
-      species.count -= 100;
-      species.count_male = Math.max(5, species.count_male - 40);
-      species.count_female = Math.max(5, species.count_female - 60);
+    if (species && species.count >= amount + 10) {
+      species.count -= amount;
+      species.count_male = Math.max(5, species.count_male - amount * 0.4);
+      species.count_female = Math.max(5, species.count_female - amount * 0.6);
       newState.nlec.budget += yieldAmt;
       newState.nlec.total_livestock = newState.nlec.livestock.reduce((sum: number, l: any) => sum + l.count, 0);
-      newState.nlec.logs = [`Sold 100 ${speciesName} (+₹${yieldAmt}M yield).`, ...(newState.nlec.logs || [])].slice(0, 5);
+      newState.nlec.logs = [`Sold ${amount} ${speciesName} (+₹${yieldAmt}M yield).`, ...(newState.nlec.logs || [])].slice(0, 5);
       updateState(newState);
     }
   };
@@ -98,9 +121,13 @@ export default function NLECDashboard() {
     const cost = 5000; // Million ₹
     if (state.nlec.budget < cost) return;
     const newState = JSON.parse(JSON.stringify(state));
-    newState.nlec.feed_storage += 1000;
+    const currentMax = newState.nlec.upgrades?.feed_silo_expansion ? 25000 : 10000;
+    if (newState.nlec.feed_storage >= currentMax) return;
+
+    const addAmt = Math.min(1000, currentMax - newState.nlec.feed_storage);
+    newState.nlec.feed_storage += addAmt;
     newState.nlec.budget -= cost;
-    newState.nlec.logs = [`Imported 1,000M kg Emergency Feed (cost ₹${cost}M).`, ...(newState.nlec.logs || [])].slice(0, 5);
+    newState.nlec.logs = [`Imported ${Math.round(addAmt).toLocaleString()}M kg Emergency Feed (cost ₹${cost}M).`, ...(newState.nlec.logs || [])].slice(0, 5);
     updateState(newState);
   };
 
@@ -138,7 +165,7 @@ export default function NLECDashboard() {
       key: 'feed_silo_expansion' as keyof NLECUpgrades,
       name: 'Feed Silo Expansion',
       cost: 10000,
-      description: 'Spacious storage upgrades increase base monthly feed production by +100M kg/month.',
+      description: 'Spacious storage upgrades increase base monthly feed production by +100M kg/month and expand storage capacity to 25,000M kg.',
     },
   ];
 
@@ -160,18 +187,6 @@ export default function NLECDashboard() {
     updateState(newState);
   };
 
-  if (isLocked) {
-    return (
-      <DashboardLayout>
-        <LockedTier tierName="Livestock System" unlockedAt="Unlock by reaching 70% average ministry morale in India Ministry">
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Livestock & Food Production System</h1>
-          </div>
-        </LockedTier>
-      </DashboardLayout>
-    );
-  }
-
   // Calculate percentage change for Food Output KPI
   const food_output_change =
     history.length > 1
@@ -180,19 +195,45 @@ export default function NLECDashboard() {
         100
       : 0;
 
-  return (
-    <DashboardLayout>
+  // Unified Dashboard Body
+  const renderDashboardBody = (isMock: boolean) => {
+    return (
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Livestock & Food Production System (NLEC)</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-2">
+              <span>🐄</span> Livestock & Food Production (NLEC)
+            </h1>
             <p className="text-muted-foreground">Manage breeding rates, dietary qualities, buy/sell herds, and invest in infrastructure.</p>
           </div>
-          <div className="bg-card border border-border px-4 py-2 rounded-lg flex items-center gap-3">
-            <span className="text-2xl">💰</span>
-            <div>
-              <div className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">NLEC Budget</div>
-              <div className="text-lg font-bold text-primary">₹{Math.round(state.nlec.budget).toLocaleString()}M</div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            {/* Batch size selector */}
+            {!isMock && (
+              <div className="bg-card border border-border px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-sm">
+                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Batch Size</span>
+                <div className="flex gap-1 bg-background p-0.5 rounded border border-border/80">
+                  {([10, 100, 500] as const).map((amount) => (
+                    <button
+                      key={amount}
+                      onClick={() => setTradeAmount(amount)}
+                      className={`text-xs px-2.5 py-1 rounded font-bold transition-all ${
+                        tradeAmount === amount
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      }`}
+                    >
+                      {amount}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="bg-card border border-border px-4 py-2 rounded-lg flex items-center gap-3 shadow-sm">
+              <span className="text-2xl">💰</span>
+              <div>
+                <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">NLEC Budget</div>
+                <div className="text-lg font-bold text-primary">₹{Math.round(state.nlec.budget).toLocaleString()}M</div>
+              </div>
             </div>
           </div>
         </div>
@@ -235,37 +276,49 @@ export default function NLECDashboard() {
           <div className="lg:col-span-5 space-y-6">
             
             {/* Feed Control Panel */}
-            <div className="bg-card border border-border rounded-lg p-5 space-y-4 shadow-sm">
+            <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
               <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <span>🌾</span> Feed Supply Control
               </h3>
               
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Silo Capacity (10,000M kg max)</span>
-                  <span className="font-semibold text-foreground">{Math.round(state.nlec.feed_storage).toLocaleString()}M kg</span>
+                  <span className="text-muted-foreground font-medium">Silo Storage ({maxStorage.toLocaleString()}M kg capacity)</span>
+                  <span className="font-bold text-foreground">{Math.round(state.nlec.feed_storage).toLocaleString()}M kg</span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+                <div className="w-full bg-muted rounded-full h-3 overflow-hidden border border-border/40">
                   <div
-                    className={`h-full transition-all duration-500 ${
-                      feedStoragePct > 50 ? 'bg-emerald-500' : feedStoragePct > 20 ? 'bg-amber-500' : 'bg-rose-500'
+                    className={`h-full transition-all duration-500 bg-gradient-to-r ${
+                      feedStoragePct > 55 ? 'from-emerald-600 to-teal-500' : feedStoragePct > 20 ? 'from-amber-600 to-orange-500' : 'from-rose-600 to-red-500'
                     }`}
                     style={{ width: `${feedStoragePct}%` }}
                   />
                 </div>
+                <div className="flex justify-between items-center text-xs mt-1">
+                  <span className="text-muted-foreground">{feedStoragePct.toFixed(0)}% full</span>
+                  <span className={`font-semibold ${
+                    netFeedChange < 0 ? 'text-rose-400 animate-pulse' : 'text-emerald-400'
+                  }`}>
+                    {netFeedChange < 0
+                      ? `⚠️ Depletes in ${monthsLeft.toFixed(1)} months`
+                      : `✅ Storage stable`
+                    }
+                  </span>
+                </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 bg-background p-3 rounded-lg border border-border">
-                <div className="text-center border-r border-border">
-                  <div className="text-[10px] text-muted-foreground uppercase">Production</div>
-                  <div className="text-sm font-semibold text-green-400">+{feedProductionRate}M kg</div>
+              <div className="grid grid-cols-3 gap-2 bg-background/60 p-3 rounded-lg border border-border/60">
+                <div className="text-center border-r border-border/60">
+                  <div className="text-[10px] text-muted-foreground uppercase font-semibold">Production</div>
+                  <div className="text-sm font-bold text-emerald-400">+{feedProductionRate}M kg</div>
                 </div>
-                <div className="text-center border-r border-border">
-                  <div className="text-[10px] text-muted-foreground uppercase">Consumption</div>
-                  <div className="text-sm font-semibold text-rose-400">-{Math.round(feedConsumptionRate)}M kg</div>
+                <div className="text-center border-r border-border/60">
+                  <div className="text-[10px] text-muted-foreground uppercase font-semibold">Consumption</div>
+                  <div className="text-sm font-bold text-rose-400">-{Math.round(feedConsumptionRate)}M kg</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-[10px] text-muted-foreground uppercase">Net Change</div>
+                  <div className="text-[10px] text-muted-foreground uppercase font-semibold">Net Change</div>
                   <div className={`text-sm font-bold ${netFeedChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {netFeedChange >= 0 ? '+' : ''}{Math.round(netFeedChange)}M kg
                   </div>
@@ -273,8 +326,8 @@ export default function NLECDashboard() {
               </div>
 
               {state.nlec.feed_storage <= 1000 && (
-                <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs p-3 rounded-lg animate-pulse flex items-start gap-2">
-                  <span>⚠️</span>
+                <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs p-3 rounded-lg flex items-start gap-2">
+                  <span className="text-base">⚠️</span>
                   <div>
                     <span className="font-bold">Starvation Warning:</span> Storage is critically low. If feed hits 0, health will decline by 8% monthly.
                   </div>
@@ -284,25 +337,25 @@ export default function NLECDashboard() {
               <div className="flex flex-col sm:flex-row gap-2 pt-2">
                 <button
                   onClick={buyEmergencyFeed}
-                  disabled={state.nlec.budget < 5000}
-                  className="flex-1 bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold py-2 px-3 rounded border border-border transition-colors disabled:opacity-50"
+                  disabled={isMock || state.nlec.budget < 5000 || state.nlec.feed_storage >= maxStorage}
+                  className="flex-1 bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold py-2.5 px-3 rounded-lg border border-border transition-colors disabled:opacity-50 flex flex-col items-center justify-center gap-0.5 shadow-sm"
                 >
-                  Buy Emergency Feed (₹5,000M)
-                  <div className="text-[9px] font-normal text-muted-foreground">+1,000M kg instant</div>
+                  <span>Buy Emergency Feed (₹5,000M)</span>
+                  <span className="text-[9px] font-normal text-muted-foreground">+1,000M kg (capped)</span>
                 </button>
                 <button
                   onClick={upgradeFeedProduction}
-                  disabled={state.nlec.budget < 8000}
-                  className="flex-1 bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold py-2 px-3 rounded border border-border transition-colors disabled:opacity-50"
+                  disabled={isMock || state.nlec.budget < 8000}
+                  className="flex-1 bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold py-2.5 px-3 rounded-lg border border-border transition-colors disabled:opacity-50 flex flex-col items-center justify-center gap-0.5 shadow-sm"
                 >
-                  Upgrade Plant (₹8,000M)
-                  <div className="text-[9px] font-normal text-muted-foreground">+100M kg/month base</div>
+                  <span>Upgrade Plant (₹8,000M)</span>
+                  <span className="text-[9px] font-normal text-muted-foreground">+100M kg/month base</span>
                 </button>
               </div>
             </div>
 
             {/* Upgrades Store */}
-            <div className="bg-card border border-border rounded-lg p-5 space-y-4 shadow-sm">
+            <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
               <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <span>🛠️</span> Infrastructure Upgrades
               </h3>
@@ -312,27 +365,38 @@ export default function NLECDashboard() {
                   const purchased = !!state.nlec.upgrades?.[upgrade.key];
                   const canAfford = state.nlec.budget >= upgrade.cost;
                   
+                  let statusTag = '';
+                  let statusClass = '';
+                  if (purchased) {
+                    statusTag = 'Installed';
+                    statusClass = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+                  } else if (canAfford) {
+                    statusTag = 'Available';
+                    statusClass = 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
+                  } else {
+                    statusTag = 'Need Budget';
+                    statusClass = 'bg-zinc-500/20 text-zinc-400 border border-zinc-500/30';
+                  }
+                  
                   return (
-                    <div key={upgrade.key} className="bg-background border border-border rounded-lg p-3 flex flex-col justify-between gap-3">
+                    <div key={upgrade.key} className="bg-background/80 border border-border rounded-xl p-4 flex flex-col justify-between gap-3 shadow-sm hover:border-border/80 transition-colors">
                       <div>
-                        <div className="flex justify-between items-start">
+                        <div className="flex justify-between items-start gap-2">
                           <span className="text-sm font-bold text-foreground">{upgrade.name}</span>
-                          {purchased ? (
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-bold uppercase tracking-wider">Installed</span>
-                          ) : (
-                            <span className="text-xs font-bold text-primary">₹{upgrade.cost.toLocaleString()}M</span>
-                          )}
+                          <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${statusClass}`}>
+                            {statusTag}
+                          </span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">{upgrade.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{upgrade.description}</p>
                       </div>
                       
                       {!purchased && (
                         <button
                           onClick={() => buyUpgrade(upgrade.key, upgrade.cost, upgrade.name)}
-                          disabled={!canAfford}
-                          className="w-full bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-bold py-1.5 px-3 rounded transition-colors disabled:opacity-50"
+                          disabled={isMock || !canAfford}
+                          className="w-full bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-bold py-2 px-3 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
                         >
-                          Buy Upgrade
+                          <span>Purchase for ₹{upgrade.cost.toLocaleString()}M</span>
                         </button>
                       )}
                     </div>
@@ -345,83 +409,102 @@ export default function NLECDashboard() {
 
           {/* RIGHT: Species Detailed Management (7 Columns) */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-4">
+            <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-4">
               <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <span>🧬</span> Species Breeding & Dietary Controls
               </h3>
               
               <div className="space-y-6">
                 {state.nlec.livestock.map((species) => {
-                  const meta = speciesMeta[species.species] || { icon: '🐾', color: '#a8a29e' };
+                  const meta = speciesMeta[species.species] || {
+                    icon: '🐾',
+                    color: '#a8a29e',
+                    gradient: 'from-zinc-900/20 to-zinc-900/10 border-zinc-500/20',
+                    glow: 'shadow-zinc-500/5',
+                    text: 'text-zinc-400',
+                  };
                   const isStarvingSpecies = state.nlec.feed_storage <= 0;
+                  const buyCost = tradeAmount * 15;
+                  const sellYield = tradeAmount * 10;
                   
                   return (
-                    <div key={species.species} className="border border-border/80 bg-background rounded-lg p-4 space-y-4">
+                    <div key={species.species} className={`border ${meta.gradient} bg-background/40 rounded-xl p-5 space-y-4 shadow-md ${meta.glow} transition-all duration-300 hover:shadow-lg`}>
                       {/* Species Header */}
-                      <div className="flex justify-between items-center border-b border-border/60 pb-3">
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-3xl">{meta.icon}</span>
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-border/40 pb-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-4xl filter drop-shadow-md">{meta.icon}</span>
                           <div>
-                            <h4 className="font-bold text-foreground text-base">{species.species}</h4>
-                            <span className="text-xs text-muted-foreground">
-                              {Math.round(species.count).toLocaleString()} animals total ({Math.round(species.count_male)}M / {Math.round(species.count_female)}F)
+                            <h4 className="font-bold text-foreground text-lg flex items-center gap-2">
+                              {species.species}
+                            </h4>
+                            <span className="text-xs text-muted-foreground font-medium">
+                              {Math.round(species.count).toLocaleString()} total animals ({Math.round(species.count_male).toLocaleString()} Male / {Math.round(species.count_female).toLocaleString()} Female)
                             </span>
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2 self-end sm:self-center">
                           <button
-                            onClick={() => buyLivestock(species.species)}
-                            disabled={state.nlec.budget < 1500}
-                            className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs px-2.5 py-1 rounded font-semibold transition-colors disabled:opacity-50 border border-emerald-500/20"
+                            onClick={() => buyLivestock(species.species, tradeAmount)}
+                            disabled={isMock || state.nlec.budget < buyCost}
+                            className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all disabled:opacity-50 border border-emerald-500/20 shadow-sm"
                           >
-                            + Buy 100 (₹1.5kM)
+                            + Buy {tradeAmount} (₹{buyCost.toLocaleString()}M)
                           </button>
                           <button
-                            onClick={() => sellLivestock(species.species)}
-                            disabled={species.count < 110}
-                            className="bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs px-2.5 py-1 rounded font-semibold transition-colors disabled:opacity-50 border border-rose-500/20"
+                            onClick={() => sellLivestock(species.species, tradeAmount)}
+                            disabled={isMock || species.count < tradeAmount + 10}
+                            className="bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all disabled:opacity-50 border border-rose-500/20 shadow-sm"
                           >
-                            - Sell 100 (₹1kM)
+                            - Sell {tradeAmount} (₹{sellYield.toLocaleString()}M)
                           </button>
                         </div>
                       </div>
 
                       {/* Primary Stats Grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                        <div className="bg-card/50 border border-border/40 rounded p-2.5">
-                          <div className="text-[10px] text-muted-foreground uppercase">Health</div>
-                          <div className={`text-base font-bold flex items-center gap-1.5 mt-0.5 ${
+                        <div className="bg-card/40 border border-border/40 rounded-xl p-3 shadow-inner">
+                          <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Health</div>
+                          <div className={`text-base font-bold flex items-center gap-1.5 mt-1 ${
                             species.health > 0.8 ? 'text-emerald-400' : species.health > 0.5 ? 'text-amber-400' : 'text-rose-400'
                           }`}>
                             {(species.health * 100).toFixed(0)}%
-                            {isStarvingSpecies && <span className="text-xs text-rose-500 animate-pulse"> starving</span>}
+                            {isStarvingSpecies && <span className="text-[10px] bg-rose-500/20 text-rose-500 border border-rose-500/30 px-1 py-0.2 rounded font-bold uppercase tracking-wider animate-pulse"> starving</span>}
                           </div>
-                          <div className="w-full bg-muted rounded-full h-1 mt-1.5 overflow-hidden">
+                          <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
                             <div className={`h-full ${
                               species.health > 0.8 ? 'bg-emerald-500' : species.health > 0.5 ? 'bg-amber-500' : 'bg-rose-500'
                             }`} style={{ width: `${species.health * 100}%` }} />
                           </div>
                         </div>
 
-                        <div className="bg-card/50 border border-border/40 rounded p-2.5">
-                          <div className="text-[10px] text-muted-foreground uppercase">Productivity</div>
-                          <div className="text-base font-bold text-foreground mt-0.5">
+                        <div className="bg-card/40 border border-border/40 rounded-xl p-3 shadow-inner">
+                          <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Productivity</div>
+                          <div className="text-base font-bold text-foreground mt-1">
                             {(species.productivity * 100).toFixed(0)}%
                           </div>
-                        </div>
-
-                        <div className="bg-card/50 border border-border/40 rounded p-2.5">
-                          <div className="text-[10px] text-muted-foreground uppercase">Reproduction</div>
-                          <div className="text-base font-bold text-cyan-400 mt-0.5">
-                            {(species.reproduction_rate * 100).toFixed(0)}%
+                          <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
+                            <div className="h-full bg-primary" style={{ width: `${species.productivity * 100}%` }} />
                           </div>
                         </div>
 
-                        <div className="bg-card/50 border border-border/40 rounded p-2.5">
-                          <div className="text-[10px] text-muted-foreground uppercase">Coverage</div>
-                          <div className="text-base font-bold text-purple-400 mt-0.5">
+                        <div className="bg-card/40 border border-border/40 rounded-xl p-3 shadow-inner">
+                          <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Reproduction</div>
+                          <div className="text-base font-bold text-cyan-400 mt-1">
+                            {(species.reproduction_rate * 100).toFixed(0)}%
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
+                            <div className="h-full bg-cyan-500" style={{ width: `${species.reproduction_rate * 100}%` }} />
+                          </div>
+                        </div>
+
+                        <div className="bg-card/40 border border-border/40 rounded-xl p-3 shadow-inner">
+                          <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Coverage</div>
+                          <div className="text-base font-bold text-purple-400 mt-1">
                             {species.coverage_percentage.toFixed(0)}%
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-1.5 mt-2 overflow-hidden">
+                            <div className="h-full bg-purple-500" style={{ width: `${species.coverage_percentage}%` }} />
                           </div>
                         </div>
                       </div>
@@ -430,22 +513,23 @@ export default function NLECDashboard() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                         
                         {/* Feeding Quality Selector */}
-                        <div className="space-y-1.5">
-                          <label className="text-xs text-muted-foreground font-semibold uppercase">Feed Quality Policy</label>
-                          <div className="grid grid-cols-3 border border-border rounded overflow-hidden">
+                        <div className="space-y-2">
+                          <label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Feed Quality Policy</label>
+                          <div className="grid grid-cols-3 border border-border/80 rounded-lg overflow-hidden bg-background">
                             {(['standard', 'premium', 'organic'] as const).map((quality) => {
                               const active = species.feeding_quality === quality;
                               const labelColors = {
-                                standard: 'bg-muted text-muted-foreground',
-                                premium: 'bg-amber-600 text-white font-semibold',
-                                organic: 'bg-emerald-600 text-white font-semibold',
+                                standard: 'bg-muted text-muted-foreground font-semibold',
+                                premium: 'bg-amber-600 text-white font-semibold shadow-sm',
+                                organic: 'bg-emerald-600 text-white font-semibold shadow-sm',
                               };
                               return (
                                 <button
                                   key={quality}
+                                  disabled={isMock}
                                   onClick={() => setFeedingQuality(species.species, quality)}
-                                  className={`text-xs py-1.5 px-1 capitalize transition-colors ${
-                                    active ? labelColors[quality] : 'bg-card text-foreground hover:bg-muted/50'
+                                  className={`text-xs py-2 px-1 capitalize transition-all ${
+                                    active ? labelColors[quality] : 'bg-transparent text-foreground hover:bg-muted/50'
                                   }`}
                                 >
                                   {quality}
@@ -453,30 +537,31 @@ export default function NLECDashboard() {
                               );
                             })}
                           </div>
-                          <div className="text-[9px] text-muted-foreground">
-                            {species.feeding_quality === 'standard' && 'Base Cost (₹10/unit) | Normal stats'}
-                            {species.feeding_quality === 'premium' && '1.5x Cost (₹15/unit) | +1% Health, +10% Productivity'}
-                            {species.feeding_quality === 'organic' && '2.0x Cost (₹20/unit) | +2% Health, +25% Productivity'}
+                          <div className="text-[10px] text-muted-foreground leading-relaxed px-1">
+                            {species.feeding_quality === 'standard' && '🌾 Cost: ₹10/unit | Baseline nutrition & normal stats'}
+                            {species.feeding_quality === 'premium' && '⭐ Cost: ₹15/unit | +1% Health, +10% Productivity'}
+                            {species.feeding_quality === 'organic' && '🍀 Cost: ₹20/unit | +2% Health, +25% Productivity'}
                           </div>
                         </div>
 
                         {/* Breeding Mode Selector */}
-                        <div className="space-y-1.5">
-                          <label className="text-xs text-muted-foreground font-semibold uppercase">Breeding Policy</label>
-                          <div className="grid grid-cols-3 border border-border rounded overflow-hidden">
+                        <div className="space-y-2">
+                          <label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Breeding Policy</label>
+                          <div className="grid grid-cols-3 border border-border/80 rounded-lg overflow-hidden bg-background">
                             {(['controlled', 'balanced', 'intensive'] as const).map((mode) => {
                               const active = species.breeding_mode === mode;
                               const labelColors = {
-                                controlled: 'bg-blue-600 text-white font-semibold',
-                                balanced: 'bg-muted text-muted-foreground',
-                                intensive: 'bg-rose-600 text-white font-semibold',
+                                controlled: 'bg-blue-600 text-white font-semibold shadow-sm',
+                                balanced: 'bg-muted text-muted-foreground font-semibold',
+                                intensive: 'bg-rose-600 text-white font-semibold shadow-sm',
                               };
                               return (
                                 <button
                                   key={mode}
+                                  disabled={isMock}
                                   onClick={() => setBreedingMode(species.species, mode)}
-                                  className={`text-xs py-1.5 px-1 capitalize transition-colors ${
-                                    active ? labelColors[mode] : 'bg-card text-foreground hover:bg-muted/50'
+                                  className={`text-xs py-2 px-1 capitalize transition-all ${
+                                    active ? labelColors[mode] : 'bg-transparent text-foreground hover:bg-muted/50'
                                   }`}
                                 >
                                   {mode}
@@ -484,10 +569,10 @@ export default function NLECDashboard() {
                               );
                             })}
                           </div>
-                          <div className="text-[9px] text-muted-foreground">
-                            {species.breeding_mode === 'controlled' && 'Conserves Feed (10% growth) | +1% Health'}
-                            {species.breeding_mode === 'balanced' && 'Standard Growth rate and standard feed demands'}
-                            {species.breeding_mode === 'intensive' && 'Max Growth (150% growth) | -2% Health, +25% Feed demanded'}
+                          <div className="text-[10px] text-muted-foreground leading-relaxed px-1">
+                            {species.breeding_mode === 'controlled' && '🛡️ Conserves Feed (10% growth rate) | +1% Health'}
+                            {species.breeding_mode === 'balanced' && '⚖️ Standard growth rate and standard feed demands'}
+                            {species.breeding_mode === 'intensive' && '🔥 Max Growth (150% growth rate) | -2% Health, +25% Feed'}
                           </div>
                         </div>
 
@@ -501,11 +586,11 @@ export default function NLECDashboard() {
         </div>
 
         {/* System Activity Logs Console */}
-        <div className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-3">
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-3">
           <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
             <span>📟</span> System Activity Console
           </h3>
-          <div className="bg-black/80 font-mono text-xs p-4 rounded-lg border border-border h-40 overflow-y-auto space-y-1.5">
+          <div className="bg-black/95 font-mono text-xs p-4 rounded-xl border border-border h-40 overflow-y-auto space-y-1.5 shadow-inner">
             {state.nlec.logs && state.nlec.logs.length > 0 ? (
               state.nlec.logs.map((log, index) => {
                 let colorClass = 'text-gray-400';
@@ -528,9 +613,38 @@ export default function NLECDashboard() {
           </div>
         </div>
 
+        {/* Strategy Cheat-Sheet */}
+        <div className="bg-card/75 border border-border rounded-xl p-5 shadow-sm space-y-4 backdrop-blur-md">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <span>💡</span> Policy Cheat-Sheet
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-2 bg-background/50 p-4 rounded-xl border border-border/60">
+              <div className="font-semibold text-amber-400 flex items-center gap-1.5">
+                <span>🌾</span> Dietary (Feed Quality) Policy
+              </div>
+              <ul className="list-disc list-inside space-y-1.5 text-muted-foreground">
+                <li><strong className="text-foreground">Standard:</strong> Base cost (₹10/unit). Standard growth and health.</li>
+                <li><strong className="text-foreground">Premium:</strong> 1.5x cost (₹15/unit). +1% health recovery, +10% productivity.</li>
+                <li><strong className="text-foreground">Organic:</strong> 2.0x cost (₹20/unit). +2% health recovery, +25% productivity.</li>
+              </ul>
+            </div>
+            <div className="space-y-2 bg-background/50 p-4 rounded-xl border border-border/60">
+              <div className="font-semibold text-cyan-400 flex items-center gap-1.5">
+                <span>🧬</span> Breeding Mode Policy
+              </div>
+              <ul className="list-disc list-inside space-y-1.5 text-muted-foreground">
+                <li><strong className="text-foreground">Controlled:</strong> 10% base reproduction. +1% health recovery. Saves feed.</li>
+                <li><strong className="text-foreground">Balanced:</strong> Standard reproduction (100% rate) and standard feed.</li>
+                <li><strong className="text-foreground">Intensive:</strong> 150% reproduction. -2% health decline, +25% feed demanded.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         {/* Species Distribution Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-card border border-border rounded-lg p-4">
+          <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
             <h3 className="text-lg font-semibold mb-4 text-foreground flex items-center gap-2">
               <span>📊</span> Population Size by Species
             </h3>
@@ -556,7 +670,7 @@ export default function NLECDashboard() {
             </ResponsiveContainer>
           </div>
 
-          <div className="bg-card border border-border rounded-lg p-4">
+          <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
             <h3 className="text-lg font-semibold mb-4 text-foreground flex items-center gap-2">
               <span>🍕</span> Animal Biomass Distribution
             </h3>
@@ -606,6 +720,69 @@ export default function NLECDashboard() {
           />
         </div>
       </div>
+    );
+  };
+
+  if (isLocked) {
+    const avg_morale = state.india.ministries.reduce((sum, m) => sum + m.morale, 0) / state.india.ministries.length;
+    const moralePct = Math.round(avg_morale * 100);
+
+    return (
+      <DashboardLayout>
+        <div className="relative min-h-[85vh]">
+          {/* Blur Overlay */}
+          <div className="absolute inset-0 bg-background/45 backdrop-blur-md rounded-xl flex items-center justify-center z-50 border border-border/50">
+            <div className="bg-card/90 border border-border p-8 rounded-2xl max-w-md w-full shadow-2xl text-center space-y-6 backdrop-blur-lg">
+              <div className="mx-auto w-16 h-16 bg-destructive/10 text-destructive border border-destructive/20 rounded-full flex items-center justify-center text-3xl font-bold animate-pulse">
+                🔒
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-foreground">Livestock System Locked</h3>
+                <p className="text-sm text-muted-foreground text-center">
+                  India Ministry average morale must reach 70% to unlock the Livestock & Food Production System (NLEC).
+                </p>
+              </div>
+
+              {/* Progress Indicator */}
+              <div className="space-y-2 bg-background/50 p-4 rounded-xl border border-border/60">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-muted-foreground">Average Ministry Morale</span>
+                  <span className={moralePct >= 70 ? 'text-emerald-400' : 'text-amber-400'}>
+                    {moralePct}% / 70%
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-3 overflow-hidden border border-border/40">
+                  <div
+                    className={`h-full transition-all duration-1000 bg-gradient-to-r ${
+                      moralePct >= 70 ? 'from-emerald-500 to-teal-400' : 'from-amber-500 to-orange-400'
+                    }`}
+                    style={{ width: `${Math.min(100, (moralePct / 70) * 100)}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-muted-foreground flex justify-between font-mono">
+                  <span>Current: {moralePct}%</span>
+                  <span>Target: 70%</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground italic bg-muted/40 p-3 rounded-lg border border-border/40">
+                💡 <strong>Tip:</strong> Go to the <strong>India Ministry</strong> page and run welfare or staff benefit programs to boost morale.
+              </p>
+            </div>
+          </div>
+
+          {/* Blurred Teaser Dashboard */}
+          <div className="opacity-20 pointer-events-none filter blur-[4px] select-none space-y-6">
+            {renderDashboardBody(true)}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      {renderDashboardBody(false)}
     </DashboardLayout>
   );
 }
