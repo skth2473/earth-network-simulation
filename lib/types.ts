@@ -12,6 +12,8 @@ export interface MinistryProgram {
   efficiency_gain: number; // positive
   execution_month: number; // month it executes
   status: 'pending' | 'executing' | 'success' | 'failed';
+  time_required?: number; // total seconds to complete
+  time_remaining?: number; // active countdown in seconds
 }
 
 export interface Ministry {
@@ -25,6 +27,7 @@ export interface Ministry {
   research: number;
   impact: number;
   programs: MinistryProgram[];
+  assigned_minister?: string; // ID of minister assigned to this ministry
 }
 
 export interface IndiaState {
@@ -38,6 +41,10 @@ export interface IndiaState {
   ministries: Ministry[];
   month: number;
   year: number;
+  vip_level?: number;
+  vip_points?: number;
+  speedups_available?: number;
+  last_chest_claim?: number; // timestamp of last mystery chest claim
 }
 
 export interface LivestockData {
