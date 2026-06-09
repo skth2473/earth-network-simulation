@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { SimulationState, HistoricalRecord, Ministry } from './types';
 import { initializeSimulation, simulateMonth, createHistoricalRecord } from './simulation-engine';
+import { completeProgram } from './program-mechanics';
 
 interface SimulationContextType {
   state: SimulationState;
@@ -83,6 +84,13 @@ function sanitizeLoadedState(loaded: any): SimulationState {
     });
   }
 
+  if (loaded.india) {
+    if (loaded.india.vip_level === undefined) loaded.india.vip_level = 1;
+    if (loaded.india.vip_points === undefined) loaded.india.vip_points = 0;
+    if (loaded.india.speedups_available === undefined) loaded.india.speedups_available = 5;
+    if (loaded.india.last_chest_claim === undefined) loaded.india.last_chest_claim = 0;
+  }
+
   return loaded as SimulationState;
 }
 
@@ -154,6 +162,49 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
 
     return () => clearInterval(interval);
   }, [state?.simulation_speed]);
+
+  // Background 1-second interval for real-time program countdowns
+  useEffect(() => {
+    if (!state) return;
+
+    const timer = setInterval(() => {
+      setState((prev) => {
+        if (!prev) return prev;
+
+        let stateChanged = false;
+        const newState = JSON.parse(JSON.stringify(prev)) as SimulationState;
+
+        newState.india.ministries.forEach((ministry) => {
+          if (!ministry.programs) return;
+
+          ministry.programs.forEach((program) => {
+            if (program.status === 'executing' && program.time_remaining !== undefined) {
+              if (program.time_remaining > 1) {
+                program.time_remaining -= 1;
+                stateChanged = true;
+              } else {
+                program.time_remaining = 0;
+                const completeResult = completeProgram(newState, ministry.id, program.id);
+                Object.assign(newState, completeResult.state);
+                
+                // Add complete notice to logs
+                newState.nlec.logs = [`Alert: ${completeResult.message}`, ...(newState.nlec.logs || [])].slice(0, 5);
+                stateChanged = true;
+              }
+            }
+          });
+        });
+
+        if (stateChanged) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+          return newState;
+        }
+        return prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [state !== null]);
 
   const setSpeed = (speed: 'paused' | 'normal' | 'fast' | 'ultra') => {
     setState((prev) => (prev ? { ...prev, simulation_speed: speed } : prev));
