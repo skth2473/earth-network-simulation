@@ -3,24 +3,24 @@ import { initializeMinistryPrograms, updateUnlockSystem, autoExecuteScheduledPro
 
 // Ministry definitions with proper IDs matching program data
 const MINISTRY_DEFINITIONS = [
-  { id: 'defence', name: 'Defence', budget: 800, allocation: 60, staffing: 85, efficiency: 0.85, morale: 0.75, research: 0.4 },
-  { id: 'education', name: 'Education', budget: 600, allocation: 50, staffing: 80, efficiency: 0.75, morale: 0.65, research: 0.3 },
-  { id: 'health', name: 'Health', budget: 550, allocation: 45, staffing: 75, efficiency: 0.7, morale: 0.6, research: 0.5 },
-  { id: 'finance', name: 'Finance', budget: 400, allocation: 35, staffing: 70, efficiency: 0.9, morale: 0.8, research: 0.2 },
-  { id: 'commerce', name: 'Commerce', budget: 400, allocation: 30, staffing: 60, efficiency: 0.82, morale: 0.72, research: 0.2 },
-  { id: 'it', name: 'IT & Digital', budget: 700, allocation: 60, staffing: 85, efficiency: 0.85, morale: 0.85, research: 0.9 },
-  { id: 'power', name: 'Power', budget: 700, allocation: 55, staffing: 78, efficiency: 0.88, morale: 0.75, research: 0.6 },
-  { id: 'water', name: 'Water Resources', budget: 450, allocation: 40, staffing: 65, efficiency: 0.75, morale: 0.65, research: 0.3 },
-  { id: 'railways', name: 'Railways', budget: 650, allocation: 50, staffing: 82, efficiency: 0.78, morale: 0.68, research: 0.25 },
-  { id: 'roads', name: 'Road Transport', budget: 600, allocation: 45, staffing: 75, efficiency: 0.72, morale: 0.6, research: 0.25 },
-  { id: 'aviation', name: 'Aviation', budget: 400, allocation: 35, staffing: 60, efficiency: 0.8, morale: 0.75, research: 0.4 },
-  { id: 'shipping', name: 'Shipping', budget: 350, allocation: 30, staffing: 55, efficiency: 0.75, morale: 0.7, research: 0.3 },
-  { id: 'labour', name: 'Labour', budget: 300, allocation: 25, staffing: 50, efficiency: 0.68, morale: 0.58, research: 0.15 },
-  { id: 'social_justice', name: 'Social Justice', budget: 500, allocation: 40, staffing: 70, efficiency: 0.72, morale: 0.65, research: 0.1 },
-  { id: 'environment', name: 'Environment', budget: 350, allocation: 30, staffing: 55, efficiency: 0.7, morale: 0.55, research: 0.4 },
-  { id: 'consumer_affairs', name: 'Consumer Affairs', budget: 250, allocation: 20, staffing: 45, efficiency: 0.75, morale: 0.65, research: 0.15 },
-  { id: 'agriculture', name: 'Agriculture', budget: 500, allocation: 40, staffing: 70, efficiency: 0.8, morale: 0.7, research: 0.35 },
-  { id: 'rural_development', name: 'Rural Development', budget: 400, allocation: 35, staffing: 65, efficiency: 0.65, morale: 0.6, research: 0.2 },
+  { id: 'defence', name: 'Defence', budget: 80, allocation: 40, staffing: 85, efficiency: 0.85, morale: 0.75, research: 0.4 },
+  { id: 'education', name: 'Education', budget: 60, allocation: 30, staffing: 80, efficiency: 0.75, morale: 0.65, research: 0.3 },
+  { id: 'health', name: 'Health', budget: 55, allocation: 25, staffing: 75, efficiency: 0.7, morale: 0.6, research: 0.5 },
+  { id: 'finance', name: 'Finance', budget: 40, allocation: 20, staffing: 70, efficiency: 0.9, morale: 0.8, research: 0.2 },
+  { id: 'commerce', name: 'Commerce', budget: 40, allocation: 15, staffing: 60, efficiency: 0.82, morale: 0.72, research: 0.2 },
+  { id: 'it', name: 'Scientific Research', budget: 20, allocation: 10, staffing: 85, efficiency: 0.85, morale: 0.85, research: 0.9 },
+  { id: 'power', name: 'Power', budget: 40, allocation: 20, staffing: 78, efficiency: 0.88, morale: 0.75, research: 0.6 },
+  { id: 'water', name: 'Water Resources', budget: 35, allocation: 15, staffing: 65, efficiency: 0.75, morale: 0.65, research: 0.3 },
+  { id: 'railways', name: 'Railways', budget: 50, allocation: 25, staffing: 82, efficiency: 0.78, morale: 0.68, research: 0.25 },
+  { id: 'roads', name: 'Road Transport', budget: 45, allocation: 20, staffing: 75, efficiency: 0.72, morale: 0.6, research: 0.25 },
+  { id: 'aviation', name: 'Aviation', budget: 20, allocation: 10, staffing: 60, efficiency: 0.8, morale: 0.75, research: 0.4 },
+  { id: 'shipping', name: 'Shipping', budget: 25, allocation: 12, staffing: 55, efficiency: 0.75, morale: 0.7, research: 0.3 },
+  { id: 'labour', name: 'Labour', budget: 15, allocation: 8, staffing: 50, efficiency: 0.68, morale: 0.58, research: 0.15 },
+  { id: 'social_justice', name: 'Social Justice', budget: 25, allocation: 12, staffing: 70, efficiency: 0.72, morale: 0.65, research: 0.1 },
+  { id: 'environment', name: 'Environment', budget: 15, allocation: 8, staffing: 55, efficiency: 0.7, morale: 0.55, research: 0.4 },
+  { id: 'consumer_affairs', name: 'Consumer Affairs', budget: 15, allocation: 8, staffing: 45, efficiency: 0.75, morale: 0.65, research: 0.15 },
+  { id: 'agriculture', name: 'Agriculture', budget: 50, allocation: 25, staffing: 70, efficiency: 0.8, morale: 0.7, research: 0.35 },
+  { id: 'rural_development', name: 'Rural Development', budget: 40, allocation: 20, staffing: 65, efficiency: 0.65, morale: 0.6, research: 0.2 },
 ];
 
 // Initialize default simulation state
@@ -40,16 +40,16 @@ export function initializeSimulation(): SimulationState {
 
   return {
     india: {
-      gdp: 3500,
-      population: 1500,
-      literacy: 0.75,
-      healthcare: 0.7,
-      infrastructure: 0.72,
-      corruption: 0.35,
-      tax_collection: 0.82,
+      gdp: 2.7,
+      population: 340,
+      literacy: 0.12,
+      healthcare: 0.15,
+      infrastructure: 0.1,
+      corruption: 0.2,
+      tax_collection: 0.4,
       ministries: initialMinistries,
       month: 1,
-      year: 2050,
+      year: 1947,
     },
     nlec: {
       total_livestock: 6500,
@@ -124,7 +124,7 @@ export function initializeSimulation(): SimulationState {
       total_expansion_value: 350000,
     },
     current_month: 1,
-    current_year: 2050,
+    current_year: 1947,
     simulation_speed: 'paused',
     unlock_system: {
       india: true,
@@ -144,19 +144,30 @@ export function simulateMonth(state: SimulationState): SimulationState {
   // Auto-execute scheduled programs
   newState = autoExecuteScheduledPrograms(newState);
 
-  // India simulation
+  // India simulation (monthly rates scaled for post-independence 1947)
   const total_ministry_impact = newState.india.ministries.reduce((sum, m) => sum + m.impact, 0) / newState.india.ministries.length;
   const corruption_factor = 1 - newState.india.corruption * 0.3;
-  const gdp_growth = (total_ministry_impact * 0.05 + (Math.random() - 0.5) * 0.02) * corruption_factor;
+  
+  // NLEC boost to GDP growth: high feed storage and livestock output help drive development
+  const nlec_food_surplus = Math.max(0, newState.nlec.food_output - 8840);
+  const nlec_boost = Math.min(0.005, nlec_food_surplus / 2000000); // Max +0.5% GDP boost per month
+
+  const gdp_growth = (total_ministry_impact * 0.003 + nlec_boost + (Math.random() - 0.5) * 0.001) * corruption_factor;
   newState.india.gdp *= 1 + gdp_growth;
 
-  const pop_growth = (0.012 + newState.india.healthcare * 0.005 - newState.india.corruption * 0.003 + (Math.random() - 0.5) * 0.005);
+  // Population growth: realistic post-independence (annual rate ~1.8%, monthly ~0.0015)
+  const pop_growth = 0.0012 + newState.india.healthcare * 0.0005 - newState.india.corruption * 0.0002;
   newState.india.population *= 1 + pop_growth;
 
-  newState.india.literacy = Math.min(0.99, newState.india.literacy + 0.001);
-  newState.india.healthcare = Math.min(0.99, newState.india.healthcare + 0.0008);
-  newState.india.infrastructure = Math.min(0.99, newState.india.infrastructure + 0.001);
-  newState.india.corruption = Math.max(0.1, newState.india.corruption - 0.002);
+  // Development indices progress based on ministry impacts
+  const edu_impact = newState.india.ministries.find(m => m.id === 'education')?.impact || 0.5;
+  const health_impact = newState.india.ministries.find(m => m.id === 'health')?.impact || 0.5;
+  const road_impact = newState.india.ministries.find(m => m.id === 'roads')?.impact || 0.5;
+
+  newState.india.literacy = Math.min(0.99, newState.india.literacy + 0.0004 + edu_impact * 0.0004);
+  newState.india.healthcare = Math.min(0.99, newState.india.healthcare + 0.0003 + health_impact * 0.0003);
+  newState.india.infrastructure = Math.min(0.99, newState.india.infrastructure + 0.0004 + road_impact * 0.0004);
+  newState.india.corruption = Math.max(0.05, newState.india.corruption - 0.0001);
 
   // Ministry updates
   newState.india.ministries = newState.india.ministries.map(m => {
@@ -298,6 +309,13 @@ export function simulateMonth(state: SimulationState): SimulationState {
   
   newState.nlec.profit = (newState.nlec.food_output * 2.5 - total_feed_cost);
   newState.nlec.budget += newState.nlec.profit;
+
+  // NLEC contributes 15% of profits back to the national SWF
+  if (newState.nlec.profit > 0) {
+    const tax_paid = newState.nlec.profit * 0.15;
+    newState.nlec.budget = Math.max(1000, newState.nlec.budget - tax_paid);
+    newState.swf.balance += tax_paid;
+  }
 
   // Add system logs
   const new_logs: string[] = [];
