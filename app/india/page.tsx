@@ -19,6 +19,14 @@ const MINISTERS_LIST = [
   { id: 'ambedkar', name: 'Dr. B.R. Ambedkar', role: 'Law Minister', skill: '-15% Corruption rate across India', avatar: '⚖️' },
 ];
 
+const RESEARCH_TECHS = [
+  { id: 'iit_setup', name: 'Establish IIT Network', cost: 100, desc: 'Establish Indian Institutes of Technology. +2% Literacy rate and +5% success rate to all Education programs.', effect: 'education_boost' },
+  { id: 'aiims_setup', name: 'Establish AIIMS Network', cost: 150, desc: 'Launch All India Institute of Medical Sciences. +3% Healthcare Index and +5% success rate to Health programs.', effect: 'health_boost' },
+  { id: 'national_grid', name: 'Integrated National Grid', cost: 200, desc: 'Connect power systems nationwide. +3% Infrastructure Index and +5% success rate to Power programs.', effect: 'power_boost' },
+  { id: 'green_rev_tech', name: 'High-Yield Agriculture Research', cost: 250, desc: 'Pioneer hybrid seeds. Permanently boosts NLEC feed production by +50M kg/month and Agriculture success rates by +5%.', effect: 'agriculture_boost' },
+  { id: 'space_telemetry', name: 'ISRO Telemetry Research', cost: 350, desc: 'Develop local satellite tracking. IT programs execute 20% faster and have +10% success rate.', effect: 'space_boost' }
+];
+
 export default function IndiaDashboard() {
   const { state, history, updateMinistry, updateState } = useSimulation();
   const [selectedMinistry, setSelectedMinistry] = useState(state.india.ministries[0]?.id || '');
@@ -261,6 +269,42 @@ export default function IndiaDashboard() {
     setCustomDesc('');
   };
 
+  const handleUnlockTech = (techId: string) => {
+    const tech = RESEARCH_TECHS.find(t => t.id === techId);
+    if (!tech) return;
+
+    const rpBalance = state.india.research_points || 0;
+    if (rpBalance < tech.cost) {
+      alert(`Insufficient Research Points!\n\nYou have ${Math.floor(rpBalance)} RP. ${tech.name} requires ${tech.cost} RP.`);
+      return;
+    }
+
+    const newState = JSON.parse(JSON.stringify(state));
+    newState.india.research_points = (newState.india.research_points || 0) - tech.cost;
+    
+    if (!newState.india.unlocked_techs) {
+      newState.india.unlocked_techs = [];
+    }
+    newState.india.unlocked_techs.push(techId);
+
+    // Apply immediate benefits:
+    if (techId === 'iit_setup') {
+      newState.india.literacy = Math.min(0.95, newState.india.literacy + 0.02);
+    } else if (techId === 'aiims_setup') {
+      newState.india.healthcare = Math.min(0.95, newState.india.healthcare + 0.03);
+    } else if (techId === 'national_grid') {
+      newState.india.infrastructure = Math.min(0.95, newState.india.infrastructure + 0.03);
+    } else if (techId === 'green_rev_tech') {
+      newState.nlec.feed_production = (newState.nlec.feed_production || 0) + 50;
+    }
+
+    // Log to event log
+    newState.nlec.logs = [`Unlocked Research: ${tech.name}.`, ...(newState.nlec.logs || [])].slice(0, 5);
+
+    updateState(newState);
+    alert(`Technology Unlocked!\n\n"${tech.name}" is now operational.\nImmediate index boost applied!`);
+  };
+
   const avg_morale = state.india.ministries.reduce((sum, m) => sum + m.morale, 0) / state.india.ministries.length;
   const top_ministries = [...state.india.ministries].sort((a, b) => b.impact - a.impact).slice(0, 6);
   const currentMinistry = state.india.ministries.find(m => m.id === selectedMinistry);
@@ -414,6 +458,11 @@ export default function IndiaDashboard() {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+            <div className="bg-black/40 border border-border/80 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-semibold text-cyan-300">
+              <span>🧬 Research:</span>
+              <span className="font-mono text-sm text-foreground bg-cyan-950/40 border border-cyan-500/20 px-2 py-0.5 rounded">{Math.floor(state.india.research_points || 0)} RP</span>
+            </div>
+
             <div className="bg-black/40 border border-border/80 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-semibold text-blue-300">
               <span>⚡ Speedups:</span>
               <span className="font-mono text-sm text-foreground bg-blue-950/40 border border-blue-500/20 px-2 py-0.5 rounded">{speedups}</span>
@@ -813,6 +862,70 @@ export default function IndiaDashboard() {
                 );
               })}
             </div>
+          </div>
+        </div>
+
+        {/* National Research Laboratories (Tech Tree) */}
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-border/40 pb-3">
+            <div>
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <span>🔬</span> National Research Laboratories (Tech Tree)
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Spend accumulated Research Points (RP) to unlock permanent national upgrades.</p>
+            </div>
+            <div className="bg-cyan-950/40 border border-cyan-500/30 px-3.5 py-1.5 rounded-xl flex items-center gap-2 text-xs font-bold text-cyan-300 shadow-sm shadow-cyan-950/20 self-start sm:self-auto">
+              <span>🧬 Balance:</span>
+              <span className="font-mono text-sm text-foreground bg-cyan-900/40 border border-cyan-500/20 px-2 py-0.5 rounded">
+                {Math.floor(state.india.research_points || 0)} RP
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {RESEARCH_TECHS.map((tech) => {
+              const isUnlocked = state.india.unlocked_techs?.includes(tech.id);
+              const canAfford = (state.india.research_points || 0) >= tech.cost;
+              
+              return (
+                <div 
+                  key={tech.id} 
+                  className={`border rounded-xl p-4 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition-all relative overflow-hidden ${
+                    isUnlocked 
+                      ? 'bg-cyan-950/10 border-cyan-500/30 shadow-cyan-950/5' 
+                      : 'bg-background/60 border-border/80'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-bold text-sm text-foreground leading-snug">{tech.name}</h4>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                        isUnlocked 
+                          ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
+                          : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                      }`}>
+                        {isUnlocked ? 'Unlocked' : `${tech.cost} RP`}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">{tech.desc}</p>
+                  </div>
+
+                  <button
+                    onClick={() => handleUnlockTech(tech.id)}
+                    disabled={isUnlocked || !canAfford}
+                    className={`w-full py-2 rounded-lg font-bold text-xs transition-all shadow-sm ${
+                      isUnlocked 
+                        ? 'bg-cyan-950/20 text-cyan-500 border border-cyan-500/20 cursor-not-allowed'
+                        : canAfford
+                          ? 'bg-cyan-600 text-white hover:bg-cyan-500 cursor-pointer border border-cyan-400/20 animate-pulse'
+                          : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+                    }`}
+                  >
+                    {isUnlocked ? '✓ Active' : canAfford ? '🔬 Unlock Tech' : `Need ${tech.cost} RP`}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
 
