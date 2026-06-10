@@ -8,6 +8,7 @@ import { MinistryGrid } from '@/components/ministry-grid';
 import { TrendChart } from '@/components/trend-chart';
 import { UnlockIndicator } from '@/components/unlock-indicator';
 import { executeProgram, completeProgram } from '@/lib/program-mechanics';
+import { MinistryProgram } from '@/lib/types';
 
 const MINISTERS_LIST = [
   { id: 'nehru', name: 'Jawaharlal Nehru', role: 'Prime Minister', skill: '+5% Success Rate for all programs nationwide', avatar: '👔' },
