@@ -24,6 +24,243 @@ export default function IndiaDashboard() {
   const [selectedMinistry, setSelectedMinistry] = useState(state.india.ministries[0]?.id || '');
   const [chestCooldown, setChestCooldown] = useState(0);
 
+  // Gemini AI Advisor States
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState(0);
+  const [advisorReport, setAdvisorReport] = useState<{
+    timestamp: string;
+    gdpStatus: { label: string; value: string; status: 'good' | 'warning' | 'critical' };
+    moraleStatus: { label: string; value: string; status: 'good' | 'warning' | 'critical'; details: string };
+    nlecStatus: { label: string; value: string; status: 'good' | 'warning' | 'critical'; details: string };
+    laggingIndex: { label: string; value: string; status: 'good' | 'warning' | 'critical'; details: string };
+    recommendations: string[];
+  } | null>(null);
+
+  // Custom Program Forge States
+  const [customName, setCustomName] = useState('');
+  const [customDesc, setCustomDesc] = useState('');
+  const [customMinistryId, setCustomMinistryId] = useState(state.india.ministries[0]?.id || '');
+  const [customBudget, setCustomBudget] = useState(5); // ₹5B default
+  const [customFocus, setCustomFocus] = useState<'morale' | 'efficiency' | 'balanced'>('balanced');
+
+  const generateAdvisorReport = () => {
+    setIsAnalyzing(true);
+    setAnalysisStep(0);
+    
+    // Animate scanning steps
+    const timer = setInterval(() => {
+      setAnalysisStep(prev => {
+        if (prev >= 4) {
+          clearInterval(timer);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 280);
+
+    setTimeout(() => {
+      // 1. Morale Status
+      const avgMorale = state.india.ministries.reduce((sum, m) => sum + m.morale, 0) / state.india.ministries.length;
+      let moraleStatus: 'good' | 'warning' | 'critical' = 'good';
+      let moraleDetails = '';
+      if (avgMorale < 0.5) {
+        moraleStatus = 'critical';
+        moraleDetails = `Nationwide morale is dangerously low at ${(avgMorale * 100).toFixed(1)}%. Budget execution efficiency is halved and risk of program failure is extremely high.`;
+      } else if (avgMorale < 0.7) {
+        moraleStatus = 'warning';
+        moraleDetails = `Morale is at ${(avgMorale * 100).toFixed(1)}%. Boost morale to 70.0% to unlock the Livestock Management System (NLEC).`;
+      } else {
+        moraleDetails = `Average morale is stable at ${(avgMorale * 100).toFixed(1)}%. Livestock system is fully operational.`;
+      }
+
+      // Find lowest morale ministry
+      const sortedByMorale = [...state.india.ministries].sort((a, b) => a.morale - b.morale);
+      const lowestMoraleM = sortedByMorale[0];
+
+      // 2. NLEC Storage Buffer
+      const has_auto_feeding = state.nlec.upgrades?.automated_feeding;
+      const feed_used = state.nlec.livestock.reduce((sum, l) => {
+        let feed = l.feed_required;
+        if (has_auto_feeding) feed *= 0.85;
+        if (l.breeding_mode === 'intensive') feed *= 1.25;
+        return sum + feed;
+      }, 0);
+      let feed_produced = state.nlec.feed_production;
+      if (state.nlec.upgrades?.feed_silo_expansion) {
+        feed_produced += 100;
+      }
+
+      let nlecStatus: 'good' | 'warning' | 'critical' = 'good';
+      let nlecValue = '';
+      let nlecDetails = '';
+      
+      if (state.nlec.livestock.length === 0) {
+        nlecStatus = 'warning';
+        nlecValue = 'No Livestock';
+        nlecDetails = 'Livestock system is unlocked but no herds have been initialized yet.';
+      } else if (feed_used > feed_produced) {
+        const net = feed_used - feed_produced;
+        const months = state.nlec.feed_storage / net;
+        nlecValue = `${months.toFixed(1)} Months`;
+        if (months < 3) {
+          nlecStatus = 'critical';
+          nlecDetails = `CRITICAL DEFICIT: Feed storage will deplete in ${months.toFixed(1)} months. Net flow: -${net.toFixed(0)}M kg/month. Animals will starve!`;
+        } else {
+          nlecStatus = 'warning';
+          nlecDetails = `WARNING: Storage depleting. Current buffer: ${months.toFixed(1)} months. Net flow: -${net.toFixed(0)}M kg/month.`;
+        }
+      } else {
+        nlecValue = 'Sustainable';
+        nlecDetails = `Surplus of +${(feed_produced - feed_used).toFixed(0)}M kg/month. Feed supply is stable.`;
+      }
+
+      // 3. Lagging Index
+      const indices = [
+        { name: 'Literacy', value: state.india.literacy, recommend: 'Assign Maulana Azad (Education) and run Literacy projects.' },
+        { name: 'Corruption', value: 1 - state.india.corruption, actualVal: state.india.corruption, recommend: 'Assign Dr. B.R. Ambedkar to Law to reduce corruption.' },
+        { name: 'Healthcare', value: state.india.healthcare, recommend: 'Assign Rajkumari Amrit Kaur (Health) and launch health programs.' },
+        { name: 'Infrastructure', value: state.india.infrastructure, recommend: 'Increase Sovereign Wealth Fund allocation to infrastructure.' },
+        { name: 'Tax Collection', value: state.india.tax_collection, recommend: 'Increase finance ministry budget to boost collection efficiency.' },
+      ];
+      const sortedIndices = [...indices].sort((a, b) => a.value - b.value);
+      const worstIndex = sortedIndices[0];
+      let indexStatus: 'good' | 'warning' | 'critical' = 'good';
+      if (worstIndex.value < 0.4) indexStatus = 'critical';
+      else if (worstIndex.value < 0.6) indexStatus = 'warning';
+
+      // 4. Recommendations List
+      const recs: string[] = [];
+      if (avgMorale < 0.7) {
+        recs.push(`Forge a custom Morale Focus program for ${lowestMoraleM.name} (morale is lowest at ${(lowestMoraleM.morale * 100).toFixed(0)}%).`);
+      }
+      if (nlecStatus === 'critical' || nlecStatus === 'warning') {
+        recs.push('Purchase the Feed Silo Expansion upgrade in NLEC (+100M kg/month production) or adjust breeding mode to Controlled.');
+      }
+      recs.push(worstIndex.recommend);
+
+      const unassignedMinisters = MINISTERS_LIST.filter(m => !state.india.ministries.some(min => min.assigned_minister === m.id));
+      if (unassignedMinisters.length > 0) {
+        recs.push(`You have ${unassignedMinisters.length} unassigned cabinet ministers (${unassignedMinisters.map(m => m.name).join(', ')}). Assign them to boost ministry efficiency.`);
+      }
+
+      if (state.india.vip_level && state.india.vip_level < 5) {
+        recs.push(`Boost your VIP Level to unlock higher program success rates and execution speed. Claim the Mystery Chest every 30s for VIP points.`);
+      }
+
+      setAdvisorReport({
+        timestamp: new Date().toLocaleTimeString(),
+        gdpStatus: {
+          label: 'GDP Trajectory',
+          value: `₹${state.india.gdp.toFixed(1)}T`,
+          status: state.india.gdp > 5.0 ? 'good' : 'warning',
+        },
+        moraleStatus: {
+          label: 'Average Morale',
+          value: `${(avgMorale * 100).toFixed(1)}%`,
+          status: moraleStatus,
+          details: moraleDetails,
+        },
+        nlecStatus: {
+          label: 'NLEC Feed Buffer',
+          value: nlecValue || 'N/A',
+          status: nlecStatus,
+          details: nlecDetails,
+        },
+        laggingIndex: {
+          label: `Lagging: ${worstIndex.name}`,
+          value: worstIndex.name === 'Corruption' ? `${(worstIndex.actualVal! * 100).toFixed(1)}%` : `${(worstIndex.value * 100).toFixed(1)}%`,
+          status: indexStatus,
+          details: worstIndex.recommend,
+        },
+        recommendations: recs,
+      });
+      setIsAnalyzing(false);
+    }, 1500);
+  };
+
+  const handleForgeProgram = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customName.trim()) {
+      alert('Please enter a Program Name.');
+      return;
+    }
+
+    const targetMinistry = state.india.ministries.find(m => m.id === customMinistryId);
+    if (!targetMinistry) {
+      alert('Invalid Ministry selected.');
+      return;
+    }
+
+    if (customBudget < 2 || customBudget > 20) {
+      alert('Budget allocation must be between ₹2B and ₹20B.');
+      return;
+    }
+
+    if (targetMinistry.allocation < customBudget) {
+      alert(`Insufficient Allocation!\n\n${targetMinistry.name} has only ₹${targetMinistry.allocation.toFixed(0)}B allocated. Reallocate budget to this ministry first.`);
+      return;
+    }
+
+    const baseSuccess = 0.5 + (targetMinistry.efficiency * 0.4);
+    const successRate = Math.min(0.95, baseSuccess);
+
+    let moraleImpact = 0;
+    let efficiencyGain = 0;
+
+    if (customFocus === 'morale') {
+      moraleImpact = Math.round(customBudget * 1.5);
+      efficiencyGain = Math.round(customBudget * 0.5);
+    } else if (customFocus === 'efficiency') {
+      moraleImpact = Math.round(customBudget * 0.4);
+      efficiencyGain = Math.round(customBudget * 2.0);
+    } else {
+      moraleImpact = Math.round(customBudget * 0.8);
+      efficiencyGain = Math.round(customBudget * 1.0);
+    }
+
+    const newState = JSON.parse(JSON.stringify(state));
+    const m = newState.india.ministries.find((min: any) => min.id === customMinistryId);
+
+    m.allocation -= customBudget;
+
+    let duration = customBudget * 4;
+
+    if (m.assigned_minister === 'bhabha' && m.id === 'it') duration = Math.round(duration * 0.7);
+    else if (m.assigned_minister === 'azad' && m.id === 'education') duration = Math.round(duration * 0.75);
+    else if (m.assigned_minister === 'kaur' && m.id === 'health') duration = Math.round(duration * 0.75);
+    else if (m.assigned_minister === 'patel' && (m.id === 'defence' || m.id === 'finance')) duration = Math.round(duration * 0.8);
+
+    if (newState.india.vip_level && newState.india.vip_level > 1) {
+      const vip_speed_factor = 1 - (newState.india.vip_level - 1) * 0.05;
+      duration = Math.round(duration * Math.max(0.5, vip_speed_factor));
+    }
+
+    const newProgram: MinistryProgram = {
+      id: `custom_${Date.now()}`,
+      name: customName,
+      description: customDesc.trim() || `Custom forged strategic initiative focused on ${customFocus} in ${m.name}.`,
+      budget_required: customBudget,
+      success_rate: Number(successRate.toFixed(2)),
+      morale_impact: moraleImpact,
+      efficiency_gain: efficiencyGain,
+      execution_month: newState.current_month,
+      status: 'executing',
+      time_required: duration,
+      time_remaining: duration,
+    };
+
+    if (!m.programs) m.programs = [];
+    m.programs.push(newProgram);
+
+    newState.nlec.logs = [`Forged program: ${customName} in ${m.name}. Running for ${duration}s.`, ...(newState.nlec.logs || [])].slice(0, 5);
+
+    updateState(newState);
+    alert(`Success!\n\n"${customName}" has been forged and is executing. It will run for ${duration}s in ${m.name}.`);
+
+    setCustomName('');
+    setCustomDesc('');
+  };
+
   const avg_morale = state.india.ministries.reduce((sum, m) => sum + m.morale, 0) / state.india.ministries.length;
   const top_ministries = [...state.india.ministries].sort((a, b) => b.impact - a.impact).slice(0, 6);
   const currentMinistry = state.india.ministries.find(m => m.id === selectedMinistry);
@@ -139,6 +376,20 @@ export default function IndiaDashboard() {
       alert(`Minister Assigned!\n\n${MINISTERS_LIST.find(m => m.id === ministerId)?.name} is now supervising ${targetM.name}.`);
     }
   };
+  const previewMinistry = state.india.ministries.find(m => m.id === customMinistryId);
+  const previewSuccess = previewMinistry ? Math.min(0.95, 0.5 + (previewMinistry.efficiency * 0.4)) : 0.7;
+  let previewMorale = 0;
+  let previewEff = 0;
+  if (customFocus === 'morale') {
+    previewMorale = customBudget * 1.5;
+    previewEff = customBudget * 0.5;
+  } else if (customFocus === 'efficiency') {
+    previewMorale = customBudget * 0.4;
+    previewEff = customBudget * 2.0;
+  } else {
+    previewMorale = customBudget * 0.8;
+    previewEff = customBudget * 1.0;
+  }
 
   return (
     <DashboardLayout>
@@ -252,6 +503,278 @@ export default function IndiaDashboard() {
             value={state.india.ministries.reduce((sum, m) => sum + m.budget, 0)}
             unit="Billion ₹"
           />
+        </div>
+
+        {/* Gemini AI Advisor & Custom Program Forge Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Gemini AI Advisor Component - 2 Columns */}
+          <div className="lg:col-span-2 bg-gradient-to-br from-card/90 to-card/65 border border-border/80 rounded-2xl p-6 shadow-xl backdrop-blur-md relative overflow-hidden flex flex-col justify-between">
+            {/* Ambient glowing light element behind the icon */}
+            <div className="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="space-y-4 flex-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-500/10 border border-blue-400/20">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 .364l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-lg bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+                      Gemini Strategic AI Advisor
+                    </h3>
+                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Real-time Simulation Telemetry Analysis</p>
+                  </div>
+                </div>
+                {advisorReport && (
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-500/20 shadow-sm animate-pulse">
+                    ACTIVE SENSORS
+                  </span>
+                )}
+              </div>
+
+              {/* Body */}
+              {isAnalyzing ? (
+                <div className="bg-black/40 border border-indigo-500/20 rounded-xl p-4 font-mono text-xs text-blue-400 space-y-3 shadow-inner h-60 flex flex-col justify-center">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping" />
+                    <span className="font-bold">Analyzing Ministry Telemetry...</span>
+                  </div>
+                  <div className="space-y-1.5 text-slate-400 border-t border-slate-900 pt-3">
+                    {[
+                      '📡 Initiating remote connection to Gemini AI core...',
+                      '📊 Fetching ministry budget allocations & morale metrics...',
+                      '🌾 Pulling NLEC storage silo sensor data...',
+                      '🔍 Cross-referencing cabinet minister assignments...',
+                      '💡 Formulating strategic development directives...',
+                    ].slice(0, analysisStep + 1).map((line, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-[11px]">
+                        <span className="text-blue-500 select-none">&gt;</span>
+                        <span>{line}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : advisorReport ? (
+                <div className="space-y-4">
+                  {/* Metric Status Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="bg-background/40 border border-border/60 rounded-xl p-2.5 flex flex-col justify-between shadow-sm min-h-[72px]">
+                      <span className="text-[10px] text-muted-foreground font-medium">{advisorReport.gdpStatus.label}</span>
+                      <span className="text-sm font-bold text-foreground font-mono mt-1">{advisorReport.gdpStatus.value}</span>
+                    </div>
+
+                    <div className={`border rounded-xl p-2.5 flex flex-col justify-between shadow-sm min-h-[72px] ${
+                      advisorReport.moraleStatus.status === 'critical' ? 'bg-rose-950/15 border-rose-500/30 text-rose-300' :
+                      advisorReport.moraleStatus.status === 'warning' ? 'bg-amber-950/15 border-amber-500/30 text-amber-300' :
+                      'bg-emerald-950/15 border-emerald-500/30 text-emerald-300'
+                    }`}>
+                      <span className="text-[10px] opacity-75 font-medium">{advisorReport.moraleStatus.label}</span>
+                      <span className="text-sm font-bold font-mono mt-1">{advisorReport.moraleStatus.value}</span>
+                    </div>
+
+                    <div className={`border rounded-xl p-2.5 flex flex-col justify-between shadow-sm min-h-[72px] ${
+                      advisorReport.nlecStatus.status === 'critical' ? 'bg-rose-950/15 border-rose-500/30 text-rose-300' :
+                      advisorReport.nlecStatus.status === 'warning' ? 'bg-amber-950/15 border-amber-500/30 text-amber-300' :
+                      'bg-emerald-950/15 border-emerald-500/30 text-emerald-300'
+                    }`}>
+                      <span className="text-[10px] opacity-75 font-medium">{advisorReport.nlecStatus.label}</span>
+                      <span className="text-sm font-bold font-mono mt-1">{advisorReport.nlecStatus.value}</span>
+                    </div>
+
+                    <div className={`border rounded-xl p-2.5 flex flex-col justify-between shadow-sm min-h-[72px] ${
+                      advisorReport.laggingIndex.status === 'critical' ? 'bg-rose-950/15 border-rose-500/30 text-rose-300' :
+                      advisorReport.laggingIndex.status === 'warning' ? 'bg-amber-950/15 border-amber-500/30 text-amber-300' :
+                      'bg-emerald-950/15 border-emerald-500/30 text-emerald-300'
+                    }`}>
+                      <span className="text-[10px] opacity-75 font-medium">{advisorReport.laggingIndex.label}</span>
+                      <span className="text-sm font-bold font-mono mt-1">{advisorReport.laggingIndex.value}</span>
+                    </div>
+                  </div>
+
+                  {/* Detailed Analysis Reports */}
+                  <div className="bg-background/30 rounded-xl p-3 border border-border/40 text-xs space-y-2 max-h-36 overflow-y-auto leading-relaxed shadow-inner">
+                    <p className="text-slate-300"><strong className="text-indigo-300">Morale Audit:</strong> {advisorReport.moraleStatus.details}</p>
+                    <p className="text-slate-300"><strong className="text-purple-300">NLEC Telemetry:</strong> {advisorReport.nlecStatus.details}</p>
+                  </div>
+
+                  {/* Gemini Recommendations */}
+                  <div className="space-y-1.5">
+                    <h4 className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                      <span>✨</span> Gemini Directives:
+                    </h4>
+                    <ul className="space-y-1 text-xs">
+                      {advisorReport.recommendations.map((rec, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-slate-300 leading-normal bg-background/25 py-1 px-2.5 rounded-lg border border-border/20 shadow-sm">
+                          <span className="text-indigo-400 font-extrabold select-none">•</span>
+                          <span>{rec}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-background/40 border border-border/80 rounded-2xl p-6 text-center shadow-inner h-60 flex flex-col items-center justify-center space-y-4">
+                  <div className="text-5xl text-indigo-500/30 animate-pulse select-none">🧠</div>
+                  <div className="max-w-md space-y-1">
+                    <h4 className="font-bold text-foreground text-sm">Strategic Telemetry Offline</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Initialize the Gemini Core to run real-time diagnostic sweeps across government ministries, Sovereign Wealth budgets, and NLEC operations.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-border/40 flex flex-col sm:flex-row justify-between items-center gap-3">
+              <span className="text-[10px] text-muted-foreground font-mono">
+                {advisorReport ? `Last scan: ${advisorReport.timestamp}` : 'Ready for instruction'}
+              </span>
+              <button
+                onClick={generateAdvisorReport}
+                disabled={isAnalyzing}
+                className="w-full sm:w-auto px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/20 hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500 transition-all border border-indigo-400/20 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <span>🧠</span>
+                <span>{advisorReport ? 'Re-Analyze Simulation' : 'Ask Gemini Advisor'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Custom Program Forge Component - 1 Column */}
+          <div className="bg-gradient-to-br from-card/90 to-card/65 border border-border/80 rounded-2xl p-6 shadow-xl backdrop-blur-md relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <form onSubmit={handleForgeProgram} className="space-y-4 flex-1">
+              <div className="flex items-center gap-2">
+                <div className="bg-gradient-to-r from-amber-500 to-yellow-500 p-2 rounded-xl text-black shadow-md border border-yellow-400/20">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg text-foreground">
+                    Cabinet Program Forge
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Execute Custom Program in Real Time</p>
+                </div>
+              </div>
+
+              {/* Form Input fields */}
+              <div className="space-y-3 text-xs">
+                {/* Program Name */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Program Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    placeholder="e.g. Clean Ganga Initiative"
+                    className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 shadow-inner font-medium text-xs"
+                  />
+                </div>
+
+                {/* Program Description */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Description (Optional)</label>
+                  <textarea
+                    value={customDesc}
+                    onChange={(e) => setCustomDesc(e.target.value)}
+                    placeholder="e.g. Elevate hygiene and restore public faith..."
+                    rows={2}
+                    className="w-full bg-background border border-border rounded-xl px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 shadow-inner font-medium text-xs resize-none"
+                  />
+                </div>
+
+                {/* Target Ministry Selection & Budget slider */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Category / Ministry</label>
+                    <select
+                      value={customMinistryId}
+                      onChange={(e) => setCustomMinistryId(e.target.value)}
+                      className="w-full bg-background border border-border rounded-xl px-2 py-2 text-foreground font-semibold text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50"
+                    >
+                      {state.india.ministries.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} (₹{m.allocation.toFixed(0)}B)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Budget: ₹{customBudget}B</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min="2"
+                        max="20"
+                        step="1"
+                        value={customBudget}
+                        onChange={(e) => setCustomBudget(Number(e.target.value))}
+                        className="w-full h-1.5 bg-background border border-border rounded-lg appearance-none cursor-pointer accent-amber-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Focus Target */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Strategic Priority Focus</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      { id: 'morale', label: 'Morale', desc: '+1.5% Morale / +0.5% Eff' },
+                      { id: 'efficiency', label: 'Efficiency', desc: '+0.4% Morale / +2.0% Eff' },
+                      { id: 'balanced', label: 'Balanced', desc: '+0.8% Morale / +1.0% Eff' },
+                    ].map(f => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setCustomFocus(f.id as any)}
+                        className={`py-1.5 px-1 rounded-xl text-[10px] font-bold transition-all border flex flex-col items-center justify-center gap-0.5 ${
+                          customFocus === f.id
+                            ? 'bg-amber-500/10 border-amber-500 text-amber-300'
+                            : 'bg-background/50 border-border/80 text-muted-foreground hover:border-amber-500/30'
+                        }`}
+                      >
+                        <span>{f.label === 'Morale' ? '🎭' : f.label === 'Efficiency' ? '⚡' : '⚖️'} {f.label}</span>
+                        <span className="text-[8px] opacity-75 font-mono leading-none">{f.desc.split(' / ')[0]}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic Live Preview Panel */}
+              <div className="bg-background/40 border border-border/60 rounded-xl p-2.5 space-y-1.5 text-[10px] leading-tight font-medium shadow-inner">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Success Probability:</span>
+                  <span className="font-mono text-foreground font-bold">{(previewSuccess * 100).toFixed(0)}%</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Research Duration:</span>
+                  <span className="font-mono text-purple-400 font-bold">{customBudget * 4} seconds</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Outcome Gains (Est.):</span>
+                  <span className="font-mono text-emerald-400 font-bold">+{previewMorale.toFixed(1)}% Morale, +{previewEff.toFixed(1)}% Efficiency</span>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full mt-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs shadow-lg shadow-amber-500/15 hover:from-amber-400 hover:to-yellow-400 transition-all border border-yellow-300 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>🛠️</span>
+                <span>Forge & Execute Program</span>
+              </button>
+            </form>
+          </div>
         </div>
 
         {/* Council of Ministers (Heroes Panel) */}
