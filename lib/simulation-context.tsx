@@ -89,6 +89,8 @@ function sanitizeLoadedState(loaded: any): SimulationState {
     if (loaded.india.vip_points === undefined) loaded.india.vip_points = 0;
     if (loaded.india.speedups_available === undefined) loaded.india.speedups_available = 5;
     if (loaded.india.last_chest_claim === undefined) loaded.india.last_chest_claim = 0;
+    if (loaded.india.research_points === undefined) loaded.india.research_points = 0;
+    if (loaded.india.unlocked_techs === undefined) loaded.india.unlocked_techs = [];
   }
 
   return loaded as SimulationState;
@@ -173,6 +175,15 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
 
         let stateChanged = false;
         const newState = JSON.parse(JSON.stringify(prev)) as SimulationState;
+
+        // Passive RP Generation (sum of ministry research stat * 0.1 per second)
+        const passiveRP = newState.india.ministries.reduce((sum: number, m: any) => sum + m.research, 0) * 0.1;
+        const bhabhaBonus = newState.india.ministries.find((m: any) => m.id === 'it')?.assigned_minister === 'bhabha' ? 0.5 : 0;
+        const totalPassive = passiveRP + bhabhaBonus;
+        if (totalPassive > 0) {
+          newState.india.research_points = (newState.india.research_points || 0) + totalPassive;
+          stateChanged = true;
+        }
 
         newState.india.ministries.forEach((ministry) => {
           if (!ministry.programs) return;

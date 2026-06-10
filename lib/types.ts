@@ -45,6 +45,8 @@ export interface IndiaState {
   vip_points?: number;
   speedups_available?: number;
   last_chest_claim?: number; // timestamp of last mystery chest claim
+  research_points?: number;
+  unlocked_techs?: string[];
 }
 
 export interface LivestockData {

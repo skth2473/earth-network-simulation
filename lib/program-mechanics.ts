@@ -48,6 +48,11 @@ export function executeProgram(
     duration = Math.round(duration * Math.max(0.5, vip_speed_factor));
   }
 
+  // Apply ISRO telemetry speed buff for Scientific Research (IT) ministry
+  if (newState.india.unlocked_techs?.includes('space_telemetry') && ministry.id === 'it') {
+    duration = Math.round(duration * 0.8); // 20% faster execution for IT programs
+  }
+
   program.time_remaining = duration;
 
   return {
@@ -97,6 +102,24 @@ export function completeProgram(
     base_success_rate = Math.min(0.95, base_success_rate + 0.15); // Kaur boosts health success by 15%
   }
 
+  // 3. Unlocked Tech Tree Buffs:
+  const techs = newState.india.unlocked_techs || [];
+  if (techs.includes('iit_setup') && ministry.id === 'education') {
+    base_success_rate = Math.min(0.95, base_success_rate + 0.05);
+  }
+  if (techs.includes('aiims_setup') && ministry.id === 'health') {
+    base_success_rate = Math.min(0.95, base_success_rate + 0.05);
+  }
+  if (techs.includes('national_grid') && ministry.id === 'power') {
+    base_success_rate = Math.min(0.95, base_success_rate + 0.05);
+  }
+  if (techs.includes('green_rev_tech') && ministry.id === 'agriculture') {
+    base_success_rate = Math.min(0.95, base_success_rate + 0.05);
+  }
+  if (techs.includes('space_telemetry') && ministry.id === 'it') {
+    base_success_rate = Math.min(0.95, base_success_rate + 0.10);
+  }
+
   const success = Math.random() < base_success_rate;
 
   if (success) {
@@ -129,10 +152,14 @@ export function completeProgram(
       }
     }
 
+    // Award Research Points on success (budget * 5)
+    const rpGained = Math.round(program.budget_required * 5);
+    newState.india.research_points = (newState.india.research_points || 0) + rpGained;
+
     return {
       state: newState,
       success: true,
-      message: `${program.name} succeeded! Morale +${morale_mod}, Efficiency +${eff_mod}`,
+      message: `${program.name} succeeded! Morale +${morale_mod}, Efficiency +${eff_mod} (+${rpGained} Research Points)`,
     };
   } else {
     // Failure path

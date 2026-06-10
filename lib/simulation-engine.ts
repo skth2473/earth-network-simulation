@@ -54,6 +54,8 @@ export function initializeSimulation(): SimulationState {
       vip_points: 0,
       speedups_available: 5,
       last_chest_claim: 0,
+      research_points: 0,
+      unlocked_techs: [],
     },
     nlec: {
       total_livestock: 6500,
