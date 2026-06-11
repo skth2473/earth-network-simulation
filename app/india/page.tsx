@@ -20,11 +20,191 @@ const MINISTERS_LIST = [
 ];
 
 const RESEARCH_TECHS = [
-  { id: 'iit_setup', name: 'Establish IIT Network', cost: 100, desc: 'Establish Indian Institutes of Technology. +2% Literacy rate and +5% success rate to all Education programs.', effect: 'education_boost' },
-  { id: 'aiims_setup', name: 'Establish AIIMS Network', cost: 150, desc: 'Launch All India Institute of Medical Sciences. +3% Healthcare Index and +5% success rate to Health programs.', effect: 'health_boost' },
-  { id: 'national_grid', name: 'Integrated National Grid', cost: 200, desc: 'Connect power systems nationwide. +3% Infrastructure Index and +5% success rate to Power programs.', effect: 'power_boost' },
-  { id: 'green_rev_tech', name: 'High-Yield Agriculture Research', cost: 250, desc: 'Pioneer hybrid seeds. Permanently boosts NLEC feed production by +50M kg/month and Agriculture success rates by +5%.', effect: 'agriculture_boost' },
-  { id: 'space_telemetry', name: 'ISRO Telemetry Research', cost: 350, desc: 'Develop local satellite tracking. IT programs execute 20% faster and have +10% success rate.', effect: 'space_boost' }
+  // Economy & Infrastructure (Category: 'economy')
+  {
+    id: 'five_year_plan',
+    category: 'economy',
+    name: 'First Five-Year Plan Draft',
+    cost_rp: 200,
+    cost_budget: 15,
+    desc: 'Plan coordinated industrial growth. Permanent GDP expansion and enhanced tax collection index.',
+    effect: 'GDP +0.5T, Tax Collection +5%'
+  },
+  {
+    id: 'rbi_national',
+    category: 'economy',
+    name: 'Reserve Bank Nationalisation',
+    cost_rp: 140,
+    cost_budget: 6,
+    desc: 'Bring the central bank under state control. Boosts Finance efficiency & national Tax Collection.',
+    effect: 'Finance Efficiency +10%, Tax Collection +4%'
+  },
+  {
+    id: 'tariff_protection',
+    category: 'economy',
+    name: 'Tariff Protection Act',
+    cost_rp: 130,
+    cost_budget: 5,
+    desc: 'Protect infant domestic manufacturing. Boosts Commerce ministry efficiency and raises national GDP.',
+    effect: 'Commerce Efficiency +8%, GDP +0.2T'
+  },
+  {
+    id: 'bhakra_dam',
+    category: 'economy',
+    name: 'Bhakra Nangal Hydro Grid',
+    cost_rp: 180,
+    cost_budget: 10,
+    desc: 'Construct a massive multipurpose river valley project. Boosts national Infrastructure index & Power efficiency.',
+    effect: 'Infrastructure +4%, Power Efficiency +8%'
+  },
+  {
+    id: 'chittaranjan_loco',
+    category: 'economy',
+    name: 'Chittaranjan Loco Works',
+    cost_rp: 160,
+    cost_budget: 8,
+    desc: 'Establish domestic steam locomotive production. Boosts Infrastructure index & Railways efficiency.',
+    effect: 'Infrastructure +4%, Railways Efficiency +10%'
+  },
+  {
+    id: 'national_highway',
+    category: 'economy',
+    name: 'National Highway Framework',
+    cost_rp: 140,
+    cost_budget: 6,
+    desc: 'Formulate road links across industrial centers. Boosts national Infrastructure index & Road Transport efficiency.',
+    effect: 'Infrastructure +3%, Road Transport Efficiency +8%'
+  },
+
+  // Defence & Shipping (Category: 'defence')
+  {
+    id: 'hal_setup',
+    category: 'defence',
+    name: 'Hindustan Aircraft Factory',
+    cost_rp: 150,
+    cost_budget: 8,
+    desc: 'Build military aircraft locally. Boosts Defence ministry morale and operational efficiency.',
+    effect: 'Defence Efficiency +10%, Defence Morale +8%'
+  },
+  {
+    id: 'ncc_setup',
+    category: 'defence',
+    name: 'National Cadet Corps Setup',
+    cost_rp: 120,
+    cost_budget: 4,
+    desc: 'Establish youth military training wings. Boosts Defence morale and staffing rates.',
+    effect: 'Defence Morale +5%, Defence Staffing +15%'
+  },
+  {
+    id: 'scindia_steam',
+    category: 'defence',
+    name: 'Scindia Steam Navigation',
+    cost_rp: 140,
+    cost_budget: 6,
+    desc: 'Expand cargo shipping fleets. Boosts Shipping efficiency and national trade volume.',
+    effect: 'Shipping Efficiency +10%, Trade Volume +₹1.2B'
+  },
+  {
+    id: 'air_india_nat',
+    category: 'defence',
+    name: 'Air India Nationalisation',
+    cost_rp: 130,
+    cost_budget: 5,
+    desc: 'Consolidate domestic airlines into a national carrier. Boosts Aviation efficiency.',
+    effect: 'Aviation Efficiency +10%, Aviation Morale +5%'
+  },
+
+  // Social Welfare & Labs (Category: 'social')
+  {
+    id: 'iit_setup',
+    category: 'social',
+    name: 'Establish IIT Network',
+    cost_rp: 100,
+    cost_budget: 5,
+    desc: 'Establish Indian Institutes of Technology. +2% Literacy rate and +5% success rate to all Education programs.',
+    effect: 'Literacy +2%, Education Success Rate +5%'
+  },
+  {
+    id: 'aiims_setup',
+    category: 'social',
+    name: 'Establish AIIMS Network',
+    cost_rp: 120,
+    cost_budget: 6,
+    desc: 'Launch All India Institute of Medical Sciences. +3% Healthcare Index and +5% success rate to Health programs.',
+    effect: 'Healthcare Index +3%, Health Success Rate +5%'
+  },
+  {
+    id: 'tifr_labs',
+    category: 'social',
+    name: 'Tata Institute of Research',
+    cost_rp: 160,
+    cost_budget: 8,
+    desc: 'Pioneer physical & nuclear research. IT programs execute 20% faster and IT efficiency rises by 12%.',
+    effect: 'IT Efficiency +12%, IT Program Speed +20%'
+  },
+  {
+    id: 'sindri_fertilizer',
+    category: 'social',
+    name: 'Sindri Fertilizer Factory',
+    cost_rp: 170,
+    cost_budget: 9,
+    desc: 'Launch state-owned chemical fertilizer production. Agriculture efficiency rises +12%, NLEC feed production +50M kg.',
+    effect: 'Agriculture Efficiency +12%, NLEC Feed Production +50M kg/month'
+  },
+  {
+    id: 'damodar_valley',
+    category: 'social',
+    name: 'Damodar Valley Grid',
+    cost_rp: 150,
+    cost_budget: 7,
+    desc: 'Supply water canals and prevent floods. Boosts Agriculture yields and Water Resources efficiency.',
+    effect: 'Water Resources Efficiency +10%, Agriculture Morale +5%'
+  },
+  {
+    id: 'min_wages_act',
+    category: 'social',
+    name: 'Minimum Wages Legislation',
+    cost_rp: 100,
+    cost_budget: 3,
+    desc: 'Enforce statutory minimum wages. Boosts Labour ministry morale and operational efficiency.',
+    effect: 'Labour Morale +15%, Labour Efficiency +5%'
+  },
+  {
+    id: 'tribal_welfare',
+    category: 'social',
+    name: 'Tribal Welfare Allocations',
+    cost_rp: 110,
+    cost_budget: 4,
+    desc: 'Apportion welfare funds for tribal and backward communities. Boosts Social Justice morale & efficiency.',
+    effect: 'Social Justice Morale +15%, Efficiency +6%'
+  },
+  {
+    id: 'forest_reserve',
+    category: 'social',
+    name: 'Forest Protection Act',
+    cost_rp: 100,
+    cost_budget: 3,
+    desc: 'Regulate logging and establish national parks. Boosts Environment morale and efficiency.',
+    effect: 'Environment Morale +10%, Efficiency +8%'
+  },
+  {
+    id: 'essential_supplies',
+    category: 'social',
+    name: 'Essential Supplies Act',
+    cost_rp: 100,
+    cost_budget: 4,
+    desc: 'Regulate trade in essential consumer items. Boosts Consumer Affairs efficiency and morale.',
+    effect: 'Consumer Affairs Efficiency +10%, Morale +5%'
+  },
+  {
+    id: 'community_dev',
+    category: 'social',
+    name: 'Community Development',
+    cost_rp: 150,
+    cost_budget: 8,
+    desc: 'Launch village self-reliance programs. Boosts Rural Development morale and efficiency.',
+    effect: 'Rural Development Morale +12%, Efficiency +8%'
+  }
 ];
 
 export default function IndiaDashboard() {
@@ -50,6 +230,7 @@ export default function IndiaDashboard() {
   const [customMinistryId, setCustomMinistryId] = useState(state.india.ministries[0]?.id || '');
   const [customBudget, setCustomBudget] = useState(5); // ₹5B default
   const [customFocus, setCustomFocus] = useState<'morale' | 'efficiency' | 'balanced'>('balanced');
+  const [activeTechTab, setActiveTechTab] = useState<'all' | 'economy' | 'defence' | 'social'>('all');
 
   const generateAdvisorReport = () => {
     setIsAnalyzing(true);
@@ -274,35 +455,90 @@ export default function IndiaDashboard() {
     if (!tech) return;
 
     const rpBalance = state.india.research_points || 0;
-    if (rpBalance < tech.cost) {
-      alert(`Insufficient Research Points!\n\nYou have ${Math.floor(rpBalance)} RP. ${tech.name} requires ${tech.cost} RP.`);
+    const swfBalance = state.swf.balance || 0;
+
+    if (rpBalance < tech.cost_rp) {
+      alert(`Insufficient Research Points!\n\nYou have ${Math.floor(rpBalance)} RP. ${tech.name} requires ${tech.cost_rp} RP.`);
+      return;
+    }
+
+    if (swfBalance < tech.cost_budget * 1000) {
+      alert(`Insufficient SWF Budget!\n\nYou have ₹${swfBalance.toFixed(0)}M. ${tech.name} requires ₹${tech.cost_budget}B (₹${tech.cost_budget * 1000}M).`);
       return;
     }
 
     const newState = JSON.parse(JSON.stringify(state));
-    newState.india.research_points = (newState.india.research_points || 0) - tech.cost;
+    newState.india.research_points = (newState.india.research_points || 0) - tech.cost_rp;
+    newState.swf.balance -= tech.cost_budget * 1000; // Deduct from SWF (scaled in Millions)
     
     if (!newState.india.unlocked_techs) {
       newState.india.unlocked_techs = [];
     }
     newState.india.unlocked_techs.push(techId);
 
-    // Apply immediate benefits:
-    if (techId === 'iit_setup') {
+    // Apply immediate index benefits:
+    if (techId === 'five_year_plan') {
+      newState.india.gdp += 0.5;
+      newState.india.tax_collection = Math.min(0.95, newState.india.tax_collection + 0.05);
+    } else if (techId === 'tariff_protection') {
+      newState.india.gdp += 0.2;
+    } else if (techId === 'iit_setup') {
       newState.india.literacy = Math.min(0.95, newState.india.literacy + 0.02);
     } else if (techId === 'aiims_setup') {
       newState.india.healthcare = Math.min(0.95, newState.india.healthcare + 0.03);
-    } else if (techId === 'national_grid') {
+    } else if (techId === 'bhakra_dam' || techId === 'chittaranjan_loco') {
+      newState.india.infrastructure = Math.min(0.95, newState.india.infrastructure + 0.04);
+    } else if (techId === 'national_highway') {
       newState.india.infrastructure = Math.min(0.95, newState.india.infrastructure + 0.03);
-    } else if (techId === 'green_rev_tech') {
+    } else if (techId === 'sindri_fertilizer') {
       newState.nlec.feed_production = (newState.nlec.feed_production || 0) + 50;
+    }
+
+    // Direct Ministry stats boosts mapping
+    const ministryMap: Record<string, { mId: string; effBoost?: number; moraleBoost?: number; staffingBoost?: number }> = {
+      rbi_national: { mId: 'finance', effBoost: 10 },
+      tariff_protection: { mId: 'commerce', effBoost: 8 },
+      bhakra_dam: { mId: 'power', effBoost: 8 },
+      chittaranjan_loco: { mId: 'railways', effBoost: 10 },
+      national_highway: { mId: 'roads', effBoost: 8 },
+      hal_setup: { mId: 'defence', effBoost: 10, moraleBoost: 8 },
+      ncc_setup: { mId: 'defence', moraleBoost: 5, staffingBoost: 15 },
+      scindia_steam: { mId: 'shipping', effBoost: 10 },
+      air_india_nat: { mId: 'aviation', effBoost: 10 },
+      iit_setup: { mId: 'education', effBoost: 5 },
+      aiims_setup: { mId: 'health', effBoost: 5 },
+      tifr_labs: { mId: 'it', effBoost: 12 },
+      sindri_fertilizer: { mId: 'agriculture', effBoost: 12 },
+      damodar_valley: { mId: 'water', effBoost: 10 },
+      min_wages_act: { mId: 'labour', moraleBoost: 15, effBoost: 5 },
+      tribal_welfare: { mId: 'social_justice', moraleBoost: 15, effBoost: 6 },
+      forest_reserve: { mId: 'environment', moraleBoost: 10, effBoost: 8 },
+      essential_supplies: { mId: 'consumer_affairs', effBoost: 10, moraleBoost: 5 },
+      community_dev: { mId: 'rural_development', moraleBoost: 12, effBoost: 8 }
+    };
+
+    const targetBoost = ministryMap[techId];
+    if (targetBoost) {
+      const minIndex = newState.india.ministries.findIndex((min: any) => min.id === targetBoost.mId);
+      if (minIndex !== -1) {
+        const m = newState.india.ministries[minIndex];
+        if (targetBoost.effBoost) {
+          m.efficiency = Math.min(0.95, m.efficiency + targetBoost.effBoost * 0.01);
+        }
+        if (targetBoost.moraleBoost) {
+          m.morale = Math.min(0.95, m.morale + targetBoost.moraleBoost * 0.01);
+        }
+        if (targetBoost.staffingBoost) {
+          m.staffing = Math.min(100, m.staffing + targetBoost.staffingBoost);
+        }
+      }
     }
 
     // Log to event log
     newState.nlec.logs = [`Unlocked Research: ${tech.name}.`, ...(newState.nlec.logs || [])].slice(0, 5);
 
     updateState(newState);
-    alert(`Technology Unlocked!\n\n"${tech.name}" is now operational.\nImmediate index boost applied!`);
+    alert(`Technology Unlocked!\n\n"${tech.name}" is now operational.\nIndex and ministry R&D boosts applied!`);
   };
 
   const avg_morale = state.india.ministries.reduce((sum, m) => sum + m.morale, 0) / state.india.ministries.length;
@@ -867,25 +1103,57 @@ export default function IndiaDashboard() {
 
         {/* National Research Laboratories (Tech Tree) */}
         <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-border/40 pb-3">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-border/40 pb-3">
             <div>
               <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <span>🔬</span> National Research Laboratories (Tech Tree)
               </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Spend accumulated Research Points (RP) to unlock permanent national upgrades.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Fund historical Indian industrial initiatives using national Research Points (RP) and Sovereign Wealth Budgets.</p>
             </div>
-            <div className="bg-cyan-950/40 border border-cyan-500/30 px-3.5 py-1.5 rounded-xl flex items-center gap-2 text-xs font-bold text-cyan-300 shadow-sm shadow-cyan-950/20 self-start sm:self-auto">
-              <span>🧬 Balance:</span>
-              <span className="font-mono text-sm text-foreground bg-cyan-900/40 border border-cyan-500/20 px-2 py-0.5 rounded">
-                {Math.floor(state.india.research_points || 0)} RP
-              </span>
+            <div className="flex flex-wrap gap-2">
+              <div className="bg-cyan-950/40 border border-cyan-500/30 px-3.5 py-1.5 rounded-xl flex items-center gap-2 text-xs font-bold text-cyan-300 shadow-sm shadow-cyan-950/20">
+                <span>🧬 R&D Pool:</span>
+                <span className="font-mono text-sm text-foreground bg-cyan-900/40 border border-cyan-500/20 px-2 py-0.5 rounded">
+                  {Math.floor(state.india.research_points || 0)} RP
+                </span>
+              </div>
+              <div className="bg-amber-950/40 border border-amber-500/30 px-3.5 py-1.5 rounded-xl flex items-center gap-2 text-xs font-bold text-amber-300 shadow-sm shadow-amber-950/20">
+                <span>💰 SWF Budget:</span>
+                <span className="font-mono text-sm text-foreground bg-amber-900/40 border border-amber-500/20 px-2 py-0.5 rounded">
+                  ₹{(state.swf.balance / 1000).toFixed(1)}B
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {RESEARCH_TECHS.map((tech) => {
+          {/* Category Tabs */}
+          <div className="flex flex-wrap gap-1.5 border-b border-border/20 pb-3 text-xs">
+            {[
+              { id: 'all', label: '🌐 All Upgrades' },
+              { id: 'economy', label: '📊 Economy & Infra' },
+              { id: 'defence', label: '🛡️ Defence & Shipping' },
+              { id: 'social', label: '🏥 Social Welfare & Labs' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTechTab(tab.id as any)}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                  activeTechTab === tab.id
+                    ? 'bg-cyan-950/40 text-cyan-400 border border-cyan-500/30 shadow-sm shadow-cyan-950/10'
+                    : 'bg-background hover:bg-background/80 text-muted-foreground border border-border/40'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {RESEARCH_TECHS.filter(t => activeTechTab === 'all' || t.category === activeTechTab).map((tech) => {
               const isUnlocked = state.india.unlocked_techs?.includes(tech.id);
-              const canAfford = (state.india.research_points || 0) >= tech.cost;
+              const canAffordRP = (state.india.research_points || 0) >= tech.cost_rp;
+              const canAffordBudget = (state.swf.balance || 0) >= tech.cost_budget * 1000;
+              const canAfford = canAffordRP && canAffordBudget;
               
               return (
                 <div 
@@ -893,36 +1161,57 @@ export default function IndiaDashboard() {
                   className={`border rounded-xl p-4 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition-all relative overflow-hidden ${
                     isUnlocked 
                       ? 'bg-cyan-950/10 border-cyan-500/30 shadow-cyan-950/5' 
-                      : 'bg-background/60 border-border/80'
+                      : 'bg-background/60 border-border/80 hover:border-cyan-500/20'
                   }`}
                 >
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-sm text-foreground leading-snug">{tech.name}</h4>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between items-start gap-2">
+                      <h4 className="font-extrabold text-sm text-foreground leading-snug">{tech.name}</h4>
+                      <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
                         isUnlocked 
                           ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
-                          : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                          : 'bg-zinc-800/80 text-zinc-400 border border-zinc-700/60'
                       }`}>
-                        {isUnlocked ? 'Unlocked' : `${tech.cost} RP`}
+                        {isUnlocked ? 'Unlocked' : 'Locked'}
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">{tech.desc}</p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed min-h-[36px]">{tech.desc}</p>
+                    
+                    {/* Improves indicators */}
+                    <div className="bg-background/40 border border-border/60 p-2 rounded-lg text-[10px] leading-tight space-y-1">
+                      <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Research Output:</div>
+                      <div className="text-cyan-400 font-semibold">{tech.effect}</div>
+                    </div>
                   </div>
 
-                  <button
-                    onClick={() => handleUnlockTech(tech.id)}
-                    disabled={isUnlocked || !canAfford}
-                    className={`w-full py-2 rounded-lg font-bold text-xs transition-all shadow-sm ${
-                      isUnlocked 
-                        ? 'bg-cyan-950/20 text-cyan-500 border border-cyan-500/20 cursor-not-allowed'
-                        : canAfford
-                          ? 'bg-cyan-600 text-white hover:bg-cyan-500 cursor-pointer border border-cyan-400/20 animate-pulse'
-                          : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
-                    }`}
-                  >
-                    {isUnlocked ? '✓ Active' : canAfford ? '🔬 Unlock Tech' : `Need ${tech.cost} RP`}
-                  </button>
+                  <div className="space-y-2">
+                    {!isUnlocked && (
+                      <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono font-medium bg-black/20 p-1.5 rounded-lg border border-border/40">
+                        <div className={`flex justify-between px-1 ${canAffordRP ? 'text-cyan-300' : 'text-rose-400'}`}>
+                          <span>RP:</span>
+                          <span>{tech.cost_rp}</span>
+                        </div>
+                        <div className={`flex justify-between px-1 ${canAffordBudget ? 'text-amber-300' : 'text-rose-400'}`}>
+                          <span>Budget:</span>
+                          <span>₹{tech.cost_budget}B</span>
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleUnlockTech(tech.id)}
+                      disabled={isUnlocked || !canAfford}
+                      className={`w-full py-2 rounded-lg font-bold text-xs transition-all border shadow-sm ${
+                        isUnlocked 
+                          ? 'bg-cyan-950/20 text-cyan-500 border-cyan-500/20 cursor-not-allowed'
+                          : canAfford
+                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white cursor-pointer border-cyan-400/20 animate-pulse'
+                            : 'bg-muted text-muted-foreground cursor-not-allowed border-transparent opacity-50'
+                      }`}
+                    >
+                      {isUnlocked ? '✓ Active' : canAfford ? '🔬 Unlock Tech' : 'Insufficient Resources'}
+                    </button>
+                  </div>
                 </div>
               );
             })}

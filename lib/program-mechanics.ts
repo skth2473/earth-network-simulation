@@ -49,7 +49,7 @@ export function executeProgram(
   }
 
   // Apply ISRO telemetry speed buff for Scientific Research (IT) ministry
-  if (newState.india.unlocked_techs?.includes('space_telemetry') && ministry.id === 'it') {
+  if (newState.india.unlocked_techs?.includes('tifr_labs') && ministry.id === 'it') {
     duration = Math.round(duration * 0.8); // 20% faster execution for IT programs
   }
 
@@ -110,13 +110,13 @@ export function completeProgram(
   if (techs.includes('aiims_setup') && ministry.id === 'health') {
     base_success_rate = Math.min(0.95, base_success_rate + 0.05);
   }
-  if (techs.includes('national_grid') && ministry.id === 'power') {
+  if (techs.includes('bhakra_dam') && ministry.id === 'power') {
     base_success_rate = Math.min(0.95, base_success_rate + 0.05);
   }
-  if (techs.includes('green_rev_tech') && ministry.id === 'agriculture') {
+  if (techs.includes('sindri_fertilizer') && ministry.id === 'agriculture') {
     base_success_rate = Math.min(0.95, base_success_rate + 0.05);
   }
-  if (techs.includes('space_telemetry') && ministry.id === 'it') {
+  if (techs.includes('tifr_labs') && ministry.id === 'it') {
     base_success_rate = Math.min(0.95, base_success_rate + 0.10);
   }
 
