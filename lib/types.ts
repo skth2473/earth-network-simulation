@@ -2,6 +2,20 @@
 
 export type UnlockTier = 'india' | 'livestock' | 'energy' | 'agriculture' | 'earth_network' | 'space';
 
+export interface ResearchTech {
+  id: string;
+  category: 'economy' | 'defence' | 'social';
+  name: string;
+  cost_rp: number;
+  cost_budget: number;
+  desc: string;
+  effect: string;
+  prerequisites?: string[];
+  x: number; // grid position x
+  y: number; // grid position y
+}
+
+
 export interface MinistryProgram {
   id: string;
   name: string;
