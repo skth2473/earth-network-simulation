@@ -44,7 +44,7 @@ export default function IndiaDashboard() {
   const [customMinistryId, setCustomMinistryId] = useState(state.india.ministries[0]?.id || '');
   const [customBudget, setCustomBudget] = useState(5); // ₹5B default
   const [customFocus, setCustomFocus] = useState<'morale' | 'efficiency' | 'balanced'>('balanced');
-  const [activeTechTab, setActiveTechTab] = useState<'all' | 'economy' | 'defence' | 'social'>('all');
+
 
   const generateAdvisorReport = () => {
     setIsAnalyzing(true);
@@ -264,96 +264,7 @@ export default function IndiaDashboard() {
     setCustomDesc('');
   };
 
-  const handleUnlockTech = (techId: string) => {
-    const tech = RESEARCH_TECHS.find(t => t.id === techId);
-    if (!tech) return;
 
-    const rpBalance = state.india.research_points || 0;
-    const swfBalance = state.swf.balance || 0;
-
-    if (rpBalance < tech.cost_rp) {
-      alert(`Insufficient Research Points!\n\nYou have ${Math.floor(rpBalance)} RP. ${tech.name} requires ${tech.cost_rp} RP.`);
-      return;
-    }
-
-    if (swfBalance < tech.cost_budget * 1000) {
-      alert(`Insufficient SWF Budget!\n\nYou have ₹${swfBalance.toFixed(0)}M. ${tech.name} requires ₹${tech.cost_budget}B (₹${tech.cost_budget * 1000}M).`);
-      return;
-    }
-
-    const newState = JSON.parse(JSON.stringify(state));
-    newState.india.research_points = (newState.india.research_points || 0) - tech.cost_rp;
-    newState.swf.balance -= tech.cost_budget * 1000; // Deduct from SWF (scaled in Millions)
-    
-    if (!newState.india.unlocked_techs) {
-      newState.india.unlocked_techs = [];
-    }
-    newState.india.unlocked_techs.push(techId);
-
-    // Apply immediate index benefits:
-    if (techId === 'five_year_plan') {
-      newState.india.gdp += 0.5;
-      newState.india.tax_collection = Math.min(0.95, newState.india.tax_collection + 0.05);
-    } else if (techId === 'tariff_protection') {
-      newState.india.gdp += 0.2;
-    } else if (techId === 'iit_setup') {
-      newState.india.literacy = Math.min(0.95, newState.india.literacy + 0.02);
-    } else if (techId === 'aiims_setup') {
-      newState.india.healthcare = Math.min(0.95, newState.india.healthcare + 0.03);
-    } else if (techId === 'bhakra_dam' || techId === 'chittaranjan_loco') {
-      newState.india.infrastructure = Math.min(0.95, newState.india.infrastructure + 0.04);
-    } else if (techId === 'national_highway') {
-      newState.india.infrastructure = Math.min(0.95, newState.india.infrastructure + 0.03);
-    } else if (techId === 'sindri_fertilizer') {
-      newState.nlec.feed_production = (newState.nlec.feed_production || 0) + 50;
-    }
-
-    // Direct Ministry stats boosts mapping
-    const ministryMap: Record<string, { mId: string; effBoost?: number; moraleBoost?: number; staffingBoost?: number }> = {
-      rbi_national: { mId: 'finance', effBoost: 10 },
-      tariff_protection: { mId: 'commerce', effBoost: 8 },
-      bhakra_dam: { mId: 'power', effBoost: 8 },
-      chittaranjan_loco: { mId: 'railways', effBoost: 10 },
-      national_highway: { mId: 'roads', effBoost: 8 },
-      hal_setup: { mId: 'defence', effBoost: 10, moraleBoost: 8 },
-      ncc_setup: { mId: 'defence', moraleBoost: 5, staffingBoost: 15 },
-      scindia_steam: { mId: 'shipping', effBoost: 10 },
-      air_india_nat: { mId: 'aviation', effBoost: 10 },
-      iit_setup: { mId: 'education', effBoost: 5 },
-      aiims_setup: { mId: 'health', effBoost: 5 },
-      tifr_labs: { mId: 'it', effBoost: 12 },
-      sindri_fertilizer: { mId: 'agriculture', effBoost: 12 },
-      damodar_valley: { mId: 'water', effBoost: 10 },
-      min_wages_act: { mId: 'labour', moraleBoost: 15, effBoost: 5 },
-      tribal_welfare: { mId: 'social_justice', moraleBoost: 15, effBoost: 6 },
-      forest_reserve: { mId: 'environment', moraleBoost: 10, effBoost: 8 },
-      essential_supplies: { mId: 'consumer_affairs', effBoost: 10, moraleBoost: 5 },
-      community_dev: { mId: 'rural_development', moraleBoost: 12, effBoost: 8 }
-    };
-
-    const targetBoost = ministryMap[techId];
-    if (targetBoost) {
-      const minIndex = newState.india.ministries.findIndex((min: any) => min.id === targetBoost.mId);
-      if (minIndex !== -1) {
-        const m = newState.india.ministries[minIndex];
-        if (targetBoost.effBoost) {
-          m.efficiency = Math.min(0.95, m.efficiency + targetBoost.effBoost * 0.01);
-        }
-        if (targetBoost.moraleBoost) {
-          m.morale = Math.min(0.95, m.morale + targetBoost.moraleBoost * 0.01);
-        }
-        if (targetBoost.staffingBoost) {
-          m.staffing = Math.min(100, m.staffing + targetBoost.staffingBoost);
-        }
-      }
-    }
-
-    // Log to event log
-    newState.nlec.logs = [`Unlocked Research: ${tech.name}.`, ...(newState.nlec.logs || [])].slice(0, 5);
-
-    updateState(newState);
-    alert(`Technology Unlocked!\n\n"${tech.name}" is now operational.\nIndex and ministry R&D boosts applied!`);
-  };
 
   const avg_morale = state.india.ministries.reduce((sum, m) => sum + m.morale, 0) / state.india.ministries.length;
   const top_ministries = [...state.india.ministries].sort((a, b) => b.impact - a.impact).slice(0, 6);
