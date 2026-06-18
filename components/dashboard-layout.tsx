@@ -12,7 +12,6 @@ interface DashboardLayoutProps {
 const NAV_ITEMS = [
   { href: '/', label: 'Overview', icon: '📊', key: 'overview' },
   { href: '/india', label: 'India Ministry', icon: '🏛️', key: 'india', lockKey: 'india' },
-  { href: '/research', label: 'Research & R&D', icon: '🔬', key: 'research', lockKey: 'india' },
   { href: '/nlec', label: 'Livestock System', icon: '🐄', key: 'nlec', lockKey: 'livestock' },
   { href: '/earth-network', label: 'Earth Network', icon: '🌍', key: 'earth', lockKey: 'earth_network' },
   { href: '/energy', label: 'Energy System', icon: '⚡', key: 'energy', lockKey: 'energy' },
@@ -47,13 +46,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 key={item.href}
                 href={locked ? '#' : item.href}
                 onClick={(e) => locked && e.preventDefault()}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  pathname === item.href
-                    ? 'bg-primary text-primary-foreground'
-                    : locked
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${pathname === item.href
+                  ? 'bg-primary text-primary-foreground'
+                  : locked
                     ? 'text-muted-foreground opacity-50 cursor-not-allowed'
                     : 'text-foreground hover:bg-muted'
-                }`}
+                  }`}
               >
                 <span className="text-base">{item.icon}</span>
                 <span>{item.label}</span>
