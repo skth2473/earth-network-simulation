@@ -12,6 +12,7 @@ interface DashboardLayoutProps {
 const NAV_ITEMS = [
   { href: '/', label: 'Overview', icon: '📊', key: 'overview' },
   { href: '/india', label: 'India Ministry', icon: '🏛️', key: 'india', lockKey: 'india' },
+  { href: '/research', label: 'Research & R&D', icon: '🔬', key: 'research', lockKey: 'india' },
   { href: '/nlec', label: 'Livestock System', icon: '🐄', key: 'nlec', lockKey: 'livestock' },
   { href: '/earth-network', label: 'Earth Network', icon: '🌍', key: 'earth', lockKey: 'earth_network' },
   { href: '/energy', label: 'Energy System', icon: '⚡', key: 'energy', lockKey: 'energy' },
